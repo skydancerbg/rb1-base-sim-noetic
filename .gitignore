@@ -1,0 +1,32 @@
+# ROS 1 Build Artifacts
+devel/
+logs/
+build/
+bin/
+lib/
+msg_gen/
+srv_gen/
+msg/*msg.h
+srv/*srv.h
+*.develspace
+.catkin
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Editor and OS Files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Gazebo/Simulation
+*.log
+*.pid
+
+# Remote and local configs
+.rosinstall

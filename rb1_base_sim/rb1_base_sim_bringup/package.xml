@@ -1,0 +1,26 @@
+<package>
+  <name>rb1_base_sim_bringup</name>
+  <version>1.12.0</version>
+  <description>
+		Launch files for Rb1_base simulation.
+	</description>
+  <maintainer email="asoriano@robotnik.es">Angel Soriano</maintainer>
+  <maintainer email="rnavarro@robotnik.es">Román Navarro</maintainer>
+
+  <license>BSD</license>
+  <url type="repository">https://github.com/RobotnikAutomation/rb1_base_sim.git</url>
+  <url type="bugtracker">https://github.com/RobotnikAutomation/rb1_base_sim/issues</url>
+
+  <author email="rguzman@robotnik.es">Roberto Guzmán</author>
+  <author email="rnavarro@robotnik.es">Román Navarro</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roslaunch</build_depend>
+  <run_depend>gazebo_ros</run_depend>
+  <run_depend>rb1_base_control</run_depend>
+  <run_depend>rb1_base_description</run_depend>
+  <run_depend>rb1_base_pad</run_depend>
+  <run_depend>rviz_plugin_tutorials</run_depend>
+
+</package>

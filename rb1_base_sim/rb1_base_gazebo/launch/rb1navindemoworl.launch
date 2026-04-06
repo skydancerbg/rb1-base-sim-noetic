@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find rb1_base_gazebo)/launch/rb1_base_gazebo.launch">
+    <arg name="gazebo_world" value="$(find rb1_base_gazebo)/worlds/demo.world"/>
+    <arg name="amcl_and_mapserver_robot_a" value="true"/>
+    <arg name="move_base_robot_a" value="true"/>
+    <arg name="map_file_robot_a" value="$(find rb1_base_localization)/maps/demo/demo.yaml"/>
+  </include>
+</launch>

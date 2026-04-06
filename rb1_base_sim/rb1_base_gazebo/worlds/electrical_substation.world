@@ -1,0 +1,145 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version="1.7">
+  <world name="default">
+
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <physics type='ode'>
+      <max_step_size>0.02</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>50</real_time_update_rate>
+    </physics>
+    <plugin name='gazebo_ros_api' filename='libgazebo_ros_api_plugin.so'/>
+    <plugin name='gazebo_ros_factory' filename='libgazebo_ros_factory_plugin.so'/>
+
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <diffuse>1 1 1 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.5 -1</direction>
+    </light>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>39.551549</latitude_deg>   <!-- world origin latitude -->
+      <longitude_deg>-0.468086</longitude_deg> <!-- world origin longitude -->
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>              <!-- ENU = 0 -->
+    </spherical_coordinates>
+    
+    <model name="ground_plane">
+        <static>true</static>
+        <link name="link">
+            <collision name="collision">
+            <geometry>
+                <plane>
+                <normal>0 0 1</normal>
+                </plane>
+            </geometry>
+            </collision>
+            <visual name="visual">
+            <geometry>
+                <plane>
+                <normal>0 0 1</normal>
+                <size>500 500</size>
+                </plane>
+            </geometry>
+            <material>
+                <ambient>0.8 0.8 0.8 1</ambient>
+                <diffuse>0.8 0.8 0.8 1</diffuse>
+                <specular>0.8 0.8 0.8 1</specular>
+            </material>
+            </visual>
+        </link>
+    </model>
+
+    <!-- Local station components (ensure model.config <name> matches) -->
+    <include>
+      <name>station_base</name>
+      <pose>-40.9745 -35.2897 -0.08 0 -0 0</pose>
+      <uri>model://station_base</uri>
+    </include>
+
+    <include>
+      <name>station_buildings</name>
+      <pose>4.2882 -14.4447 0 0 -0 0</pose>
+      <uri>model://station_buildings</uri>
+    </include>
+
+    <include>
+      <name>station_house</name>
+      <pose>-13.1814 25.1466 6.41029 0 -0 0</pose>
+      <uri>model://station_house</uri>
+    </include>
+
+    <include>
+      <name>station_robothouse</name>
+      <pose>-19.946 9.0 -0.08 0 -0 0</pose>
+      <uri>model://station_robothouse</uri>
+    </include>
+
+    <include>
+      <name>station_fence</name>
+      <pose>-40.9731 10.5303 0 0 -0 0</pose>
+      <uri>model://station_fence</uri>
+    </include>
+
+    <!-- Electrical stuff parts -->
+    <include>
+      <name>station_electrical_stuff_part_1</name>
+      <pose>7.31381 -28.5644 0 0 -0 0</pose>
+      <uri>model://station_electrical_stuff_part_1</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_2</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://station_electrical_stuff_part_2</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_3</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://station_electrical_stuff_part_3</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_4</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://station_electrical_stuff_part_4</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_5</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://station_electrical_stuff_part_5</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_6</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://station_electrical_stuff_part_6</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_7</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://station_electrical_stuff_part_7</uri>
+    </include>
+
+    <include>
+      <name>summit_docking_station</name>
+      <pose>-18.922 10.0365 0.022095 0 0 -1.57084</pose>
+      <uri>model://summit_docking_station</uri>
+    </include>
+
+    <!-- Animated worker actor patrolling the central yard -->
+    <include>
+      <name>station_worker_actor</name>
+      <pose>-12 4 0 0 0 0</pose>
+      <uri>model://station_worker_actor</uri>
+    </include>
+
+    <!-- GUI camera -->
+    <gui fullscreen="false">
+      <camera name="user_camera">
+        <pose>-50 -50 50 0 0.5 0.7</pose>
+      </camera>
+    </gui>
+
+
+  </world>
+</sdf>
