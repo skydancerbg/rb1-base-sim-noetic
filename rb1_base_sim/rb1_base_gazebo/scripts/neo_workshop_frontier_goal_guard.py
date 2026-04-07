@@ -17,6 +17,7 @@ class FrontierGoalGuard(object):
         self.current_goal_id = None
         self.current_goal_xy = None
         self.current_goal_blacklisted = False
+        self.current_goal_recovery_count = 0
         self.last_cancel_time = rospy.Time(0)
 
         self.cancel_pub = rospy.Publisher("move_base/cancel", GoalID, queue_size=10)
@@ -77,6 +78,7 @@ class FrontierGoalGuard(object):
         self.current_goal_id = goal_id
         self.current_goal_xy = goal_xy
         self.current_goal_blacklisted = False
+        self.current_goal_recovery_count = 0
         rospy.loginfo(
             "Frontier goal guard tracking explore goal %s at (%.2f, %.2f)",
             goal_id,
@@ -90,6 +92,17 @@ class FrontierGoalGuard(object):
         if not self.is_explore_goal(self.current_goal_id):
             return
         if self.current_goal_blacklisted:
+            return
+
+        self.current_goal_recovery_count += 1
+        if self.current_goal_recovery_count < 2:
+            rospy.loginfo(
+                "Frontier goal guard observed first recovery for goal %s at (%.2f, %.2f); "
+                "waiting for a repeated recovery before blacklisting",
+                self.current_goal_id,
+                self.current_goal_xy[0],
+                self.current_goal_xy[1],
+            )
             return
 
         now = rospy.Time.now()

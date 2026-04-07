@@ -2,6 +2,12 @@
 
 This repository now includes an additive frontier-based mapping path for `neo_workshop` alongside the existing custom `neo_workshop_auto_map.py` flow.
 
+## Repo Facts
+
+- Repo root: `~/catkin_ws/src`
+- Workspace root: `~/catkin_ws`
+- Build system: `catkin_make`
+
 ## Chosen Package
 
 - Package: `explore_lite`
@@ -36,6 +42,8 @@ It starts:
 - `slam_gmapping`
 - a dedicated exploration-only `move_base`
 - `explore_lite`
+- `neo_workshop_frontier_goal_guard.py`
+- the corrected frontier RViz config
 
 The map still comes from:
 
@@ -107,10 +115,11 @@ That keeps the previous working map intact if `map_saver` fails.
   - uses repo-specific scripted motion
 
 - Frontier path:
-  - launch `rb1_neo_workshop_frontier_mapping.launch`
-  - lets `explore_lite` choose frontier goals through `move_base`
-  - uses package-based exploration instead of custom motion scripting
-  - uses a dedicated frontier-only planning stack instead of the normal saved-map navigation stack
+- launch `rb1_neo_workshop_frontier_mapping.launch`
+- lets `explore_lite` choose frontier goals through `move_base`
+- uses package-based exploration instead of custom motion scripting
+- uses a dedicated frontier-only planning stack instead of the normal saved-map navigation stack
+- uses a frontier goal guard to stop repeated retry of locally bad frontier regions
 
 ## Why The Frontier Path Has Its Own `move_base`
 
@@ -133,14 +142,33 @@ The frontier launch now uses these dedicated files:
 
 This keeps normal navigation untouched while making manual 2D Nav Goals and `explore_lite` use the same exploration-specific planner.
 
-The frontier-only stack is intentionally more conservative than normal navigation:
+The frontier-only stack is intentionally separate from normal navigation:
 
-- larger effective wall clearance
 - simpler `TrajectoryPlannerROS` local planner
-- slower linear and angular speeds
-- stronger obstacle cost weighting
-- shorter planner/controller patience to abandon bad local traps sooner
-- no reverse escape preference during local recovery
+- frontier-only global/local costmap tuning
+- frontier-only recovery and patience tuning
+- frontier-only goal guard behavior
+
+## Current Verified Frontier Behavior
+
+- Frontier wiring is working:
+  - `explore_lite` sends goals
+  - `NavfnROS` produces a real global path
+  - `move_base` publishes `cmd_vel`
+- The corrected frontier RViz config now visualizes the active frontier plans and relevant costmap layers instead of stale TEB topics.
+- The startup regression introduced by the goal guard was fixed by requiring repeated recovery before blacklisting a frontier region.
+- The robot geometry should continue to be modeled with `robot_radius`; the RB1 in this simulation is cylindrical.
+
+## Current Remaining Issue
+
+- The main remaining frontier issue is post-passage wall-hugging:
+  - the robot can get through the passage
+  - then it can still drive too close to the wall and enter the local inflated area
+- The next tuning focus should stay on:
+  - frontier global/local inflation split
+  - frontier local costmap gradient
+  - frontier local planner wall-clearance behavior
+- Do not spend time on explicit footprint-shape changes for this robot unless explicitly requested.
 
 ## Recommended Workflow
 

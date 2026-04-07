@@ -1,2 +1,2 @@
 [context]
-fallback_files = ["AGENTS.md", "PROJECT_STATE.md", "TREE.md", "LINKS.md"]
+fallback_files = ["AGENTS.md", "PROJECT_STATE.md", "docs/neo_workshop_frontier_mapping.md", "TREE.md", "LINKS.md"]
