@@ -28,5 +28,5 @@ install(DIRECTORY rviz
 
 install(PROGRAMS
         scripts/neo_workshop_auto_map.py
+        scripts/neo_workshop_frontier_goal_guard.py
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-

@@ -1,14 +1,16 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="launch_rviz" default="true"/>
-  <arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_base.rviz"/>
+  <arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_neo_workshop_frontier_mapping.rviz"/>
   <arg name="planner_frequency" default="0.33"/>
-  <arg name="progress_timeout" default="20.0"/>
+  <arg name="progress_timeout" default="8.0"/>
   <arg name="potential_scale" default="0.002"/>
   <arg name="orientation_scale" default="0.0"/>
   <arg name="gain_scale" default="0.8"/>
   <arg name="min_frontier_size" default="0.8"/>
   <arg name="visualize" default="true"/>
+  <arg name="blacklist_radius" default="1.0"/>
+  <arg name="blacklist_duration" default="60.0"/>
 
   <include file="$(find rb1_base_gazebo)/launch/rb1_base_gazebo.launch">
     <arg name="launch_rviz" value="$(arg launch_rviz)"/>
@@ -27,6 +29,15 @@
   </include>
 
   <include file="$(find rb1_base_gazebo)/launch/rb1_neo_workshop_frontier_move_base.launch"/>
+
+  <node name="frontier_goal_guard"
+        pkg="rb1_base_gazebo"
+        type="neo_workshop_frontier_goal_guard.py"
+        ns="robot"
+        output="screen">
+    <param name="blacklist_radius" value="$(arg blacklist_radius)"/>
+    <param name="blacklist_duration" value="$(arg blacklist_duration)"/>
+  </node>
 
   <node name="explore"
         pkg="explore_lite"

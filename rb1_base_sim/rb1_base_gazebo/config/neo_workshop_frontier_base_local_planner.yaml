@@ -2,29 +2,29 @@ TrajectoryPlannerROS:
   acc_lim_x: 0.8
   acc_lim_y: 0.0
   acc_lim_theta: 0.9
-  max_vel_x: 0.20
+  max_vel_x: 0.18
   min_vel_x: 0.05
   max_vel_theta: 0.55
   min_vel_theta: -0.55
   min_in_place_rotational_vel: 0.2
-  escape_vel: 0.0
+  escape_vel: -0.06
   holonomic_robot: false
   yaw_goal_tolerance: 0.20
   xy_goal_tolerance: 0.25
   latch_xy_goal_tolerance: true
-  sim_time: 1.5
+  sim_time: 1.0
   sim_granularity: 0.025
   angular_sim_granularity: 0.025
   vx_samples: 8
   vtheta_samples: 24
   meter_scoring: true
-  pdist_scale: 0.6
-  gdist_scale: 0.8
-  occdist_scale: 0.08
-  heading_lookahead: 0.325
+  pdist_scale: 0.5
+  gdist_scale: 0.7
+  occdist_scale: 0.24
+  heading_lookahead: 0.15
   heading_scoring: false
   dwa: true
   publish_cost_grid_pc: false
   global_frame_id: robot_odom
-  oscillation_reset_dist: 0.20
+  oscillation_reset_dist: 0.10
   prune_plan: true

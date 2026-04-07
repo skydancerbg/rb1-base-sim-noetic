@@ -20,8 +20,10 @@
   
   <build_depend>gazebo_ros</build_depend>
   <build_depend>gazebo_ros_control</build_depend>
+  <build_depend>actionlib_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>map_server</build_depend>
+  <build_depend>move_base_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>rb1_base_control</build_depend>
   <build_depend>rb1_base_description</build_depend>
@@ -36,8 +38,10 @@
 
   <run_depend>gazebo_ros</run_depend>
   <run_depend>gazebo_ros_control</run_depend>
+  <run_depend>actionlib_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>map_server</run_depend>
+  <run_depend>move_base_msgs</run_depend>
   <run_depend>nav_msgs</run_depend>
   <run_depend>rb1_base_control</run_depend>
   <run_depend>rb1_base_description</run_depend>

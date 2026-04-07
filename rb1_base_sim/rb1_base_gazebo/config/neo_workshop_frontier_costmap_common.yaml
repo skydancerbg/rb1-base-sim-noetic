@@ -1,9 +1,9 @@
 publish_frequency: 1.0
 
-robot_radius: 0.28
+robot_radius: 0.26
 
 inflation_layer:
-  inflation_radius: 0.35
+  inflation_radius: 0.28
 
 obstacle_layer:
   obstacle_range: 4.0
