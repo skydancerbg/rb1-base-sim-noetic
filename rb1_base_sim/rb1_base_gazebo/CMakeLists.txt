@@ -23,4 +23,10 @@ install(DIRECTORY launch
 install(DIRECTORY worlds
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
+install(DIRECTORY rviz
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+install(PROGRAMS
+        scripts/neo_workshop_auto_map.py
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

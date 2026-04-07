@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+  <group ns="robot">
+    <node pkg="move_base" type="move_base" name="move_base" output="screen" clear_params="true">
+      <remap from="cmd_vel" to="move_base/cmd_vel"/>
+      <remap from="odom" to="robotnik_base_control/odom"/>
+
+      <rosparam file="$(find rb1_base_gazebo)/config/neo_workshop_frontier_move_base.yaml" command="load"/>
+
+      <rosparam file="$(find rb1_base_gazebo)/config/neo_workshop_frontier_costmap_common.yaml" command="load" ns="global_costmap"/>
+      <rosparam file="$(find rb1_base_gazebo)/config/neo_workshop_frontier_global_costmap.yaml" command="load"/>
+
+      <rosparam file="$(find rb1_base_gazebo)/config/neo_workshop_frontier_costmap_common.yaml" command="load" ns="local_costmap"/>
+      <rosparam file="$(find rb1_base_gazebo)/config/neo_workshop_frontier_local_costmap.yaml" command="load"/>
+
+      <rosparam file="$(find rb1_base_gazebo)/config/neo_workshop_frontier_base_local_planner.yaml" command="load"/>
+
+      <param name="local_costmap/obstacle_layer/front_laser/topic" value="front_laser/scan"/>
+      <param name="local_costmap/obstacle_layer/front_laser/sensor_frame" value="robot_front_laser_link"/>
+    </node>
+  </group>
+</launch>

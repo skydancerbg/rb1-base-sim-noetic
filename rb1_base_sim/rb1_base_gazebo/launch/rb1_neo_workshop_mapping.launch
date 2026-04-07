@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="launch_rviz" default="false"/>
+  <arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_base.rviz"/>
+  <arg name="launch_auto_map" default="false"/>
+
+  <include file="$(find rb1_base_gazebo)/launch/rb1_base_gazebo.launch">
+    <arg name="launch_rviz" value="$(arg launch_rviz)"/>
+    <arg name="rviz_config" value="$(arg rviz_config)"/>
+    <arg name="launch_robot_a" value="true"/>
+    <arg name="launch_robot_b" value="false"/>
+    <arg name="launch_robot_c" value="false"/>
+    <arg name="gazebo_world" value="$(find rb1_base_gazebo)/worlds/neo_workshop.world"/>
+    <arg name="x_init_pose_robot_a" value="0.0"/>
+    <arg name="y_init_pose_robot_a" value="0.0"/>
+    <arg name="z_init_pose_robot_a" value="0.0"/>
+    <arg name="init_yaw_robot_a" value="0.0"/>
+    <arg name="gmapping_robot_a" value="true"/>
+    <arg name="amcl_and_mapserver_robot_a" value="false"/>
+    <arg name="move_base_robot_a" value="false"/>
+  </include>
+
+  <node if="$(arg launch_auto_map)"
+        name="neo_workshop_auto_map"
+        pkg="rb1_base_gazebo"
+        type="neo_workshop_auto_map.py"
+        output="screen"/>
+</launch>

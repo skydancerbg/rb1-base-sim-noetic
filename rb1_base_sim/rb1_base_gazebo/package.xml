@@ -20,9 +20,14 @@
   
   <build_depend>gazebo_ros</build_depend>
   <build_depend>gazebo_ros_control</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>map_server</build_depend>
+  <build_depend>nav_msgs</build_depend>
   <build_depend>rb1_base_control</build_depend>
   <build_depend>rb1_base_description</build_depend>
   <build_depend>rb1_base_pad</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>std_srvs</build_depend>
   <build_depend>tf</build_depend>
@@ -31,9 +36,14 @@
 
   <run_depend>gazebo_ros</run_depend>
   <run_depend>gazebo_ros_control</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>map_server</run_depend>
+  <run_depend>nav_msgs</run_depend>
   <run_depend>rb1_base_control</run_depend>
   <run_depend>rb1_base_description</run_depend>
   <run_depend>rb1_base_pad</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>sensor_msgs</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>std_srvs</run_depend>
   <run_depend>tf</run_depend>
