@@ -64,9 +64,25 @@
 - `/robot/move_base/NavfnROS/plan`
 - `/robot/move_base/TrajectoryPlannerROS/global_plan`
 - `/robot/move_base/TrajectoryPlannerROS/local_plan`
-- The startup regression from the frontier goal guard was fixed by requiring repeated recovery before blacklisting a frontier region.
-- Current remaining frontier issue is post-passage wall-hugging / entering the local inflated area.
-- The next tuning focus should stay on frontier local/global inflation split and local planner wall-clearance behavior, not footprint shape.
+- The `explore_lite` frontier stack is integrated, launches, and moves with a dedicated frontier-only `move_base`.
+- The frontier goal guard now blacklists only after repeated recovery on the same active goal.
+- Repeated bad-corner reattack was reduced by the guard.
+- The startup regression from the frontier goal guard was fixed.
+- Current verified frontier global costmap baseline:
+- `inflation_radius: 0.33`
+- `cost_scaling_factor: 4.0`
+- Current verified frontier local costmap baseline:
+- `inflation_radius: 0.34`
+- `cost_scaling_factor: 3.0`
+- Current verified frontier local planner baseline includes:
+- `max_vel_x: 0.16`
+- `occdist_scale: 0.31`
+- `sim_time: 1.0`
+- Current reported improvement: the tested post-pass wall-hugging failure mode improved.
+- Current caution: do not claim full end-to-end perfect exploration in every long run yet.
+- Do not revisit polygon footprint ideas for this robot.
+- Do not blindly retune inflation without runtime evidence.
+- Prefer frontier-only minimal changes and base next work on observed long-run behavior, not on reopening older solved debugging branches.
 
 # Known Issue
 

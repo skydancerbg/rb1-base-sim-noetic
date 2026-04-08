@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import math
+import subprocess
 
 import rospy
-from actionlib_msgs.msg import GoalID
+from actionlib_msgs.msg import GoalID, GoalStatusArray
+from geometry_msgs.msg import PoseStamped
 from move_base_msgs.msg import MoveBaseActionGoal, RecoveryStatus
 
 
@@ -12,17 +14,30 @@ class FrontierGoalGuard(object):
         self.blacklist_radius = rospy.get_param("~blacklist_radius", 1.0)
         self.blacklist_duration = rospy.get_param("~blacklist_duration", 60.0)
         self.recovery_cancel_cooldown = rospy.get_param("~recovery_cancel_cooldown", 2.0)
+        self.stale_goal_timeout = rospy.get_param("~stale_goal_timeout", 15.0)
+        self.stale_current_goal_timeout = rospy.get_param("~stale_current_goal_timeout", 6.0)
+        self.recent_recovery_window = rospy.get_param("~recent_recovery_window", 45.0)
+        self.explore_restart_cooldown = rospy.get_param("~explore_restart_cooldown", 30.0)
 
         self.blacklist = []
         self.current_goal_id = None
         self.current_goal_xy = None
         self.current_goal_blacklisted = False
         self.current_goal_recovery_count = 0
+        self.last_goal_time = rospy.Time(0)
+        self.last_current_goal_time = rospy.Time(0)
+        self.last_recovery_time = rospy.Time(0)
+        self.last_explore_restart_time = rospy.Time(0)
+        self.last_status_goal_id = None
+        self.last_status_code = None
         self.last_cancel_time = rospy.Time(0)
 
         self.cancel_pub = rospy.Publisher("move_base/cancel", GoalID, queue_size=10)
         rospy.Subscriber("move_base/goal", MoveBaseActionGoal, self.goal_callback, queue_size=10)
+        rospy.Subscriber("move_base/current_goal", PoseStamped, self.current_goal_callback, queue_size=10)
+        rospy.Subscriber("move_base/status", GoalStatusArray, self.status_callback, queue_size=10)
         rospy.Subscriber("move_base/recovery_status", RecoveryStatus, self.recovery_callback, queue_size=10)
+        rospy.Timer(rospy.Duration(1.0), self.watchdog_callback)
 
     def purge_blacklist(self):
         now = rospy.Time.now()
@@ -60,8 +75,10 @@ class FrontierGoalGuard(object):
         if not self.is_explore_goal(goal_id):
             return
 
+        self.last_goal_time = rospy.Time.now()
         entry = self.blacklist_match(goal_xy)
         if entry is not None:
+            self.last_recovery_time = rospy.Time.now()
             reason = (
                 "goal at (%.2f, %.2f) is within %.2f m of blacklisted frontier region "
                 "centered at (%.2f, %.2f)"
@@ -86,6 +103,16 @@ class FrontierGoalGuard(object):
             goal_xy[1],
         )
 
+    def current_goal_callback(self, _msg):
+        self.last_current_goal_time = rospy.Time.now()
+
+    def status_callback(self, msg):
+        for status in reversed(msg.status_list):
+            if self.is_explore_goal(status.goal_id.id):
+                self.last_status_goal_id = status.goal_id.id
+                self.last_status_code = status.status
+                return
+
     def recovery_callback(self, msg):
         if self.current_goal_id is None or self.current_goal_xy is None:
             return
@@ -94,6 +121,7 @@ class FrontierGoalGuard(object):
         if self.current_goal_blacklisted:
             return
 
+        self.last_recovery_time = rospy.Time.now()
         self.current_goal_recovery_count += 1
         if self.current_goal_recovery_count < 2:
             rospy.loginfo(
@@ -125,6 +153,47 @@ class FrontierGoalGuard(object):
             "recovery behavior %s triggered at the same frontier region" % msg.recovery_behavior_name,
         )
         self.current_goal_blacklisted = True
+
+    def restart_explore(self, reason):
+        now = rospy.Time.now()
+        if (now - self.last_explore_restart_time).to_sec() < self.explore_restart_cooldown:
+            return
+
+        self.last_explore_restart_time = now
+        self.current_goal_id = None
+        self.current_goal_xy = None
+        self.current_goal_blacklisted = False
+        self.current_goal_recovery_count = 0
+        self.last_goal_time = now
+        self.last_current_goal_time = now
+        rospy.logwarn("Frontier goal guard restarting /robot/explore: %s", reason)
+        subprocess.call(["rosnode", "kill", "/robot/explore"])
+
+    def watchdog_callback(self, _event):
+        now = rospy.Time.now()
+        if self.last_recovery_time == rospy.Time(0):
+            return
+        if (now - self.last_recovery_time).to_sec() > self.recent_recovery_window:
+            return
+        if self.last_goal_time == rospy.Time(0):
+            return
+        if (now - self.last_goal_time).to_sec() < self.stale_goal_timeout:
+            return
+        if self.last_current_goal_time != rospy.Time(0):
+            if (now - self.last_current_goal_time).to_sec() < self.stale_current_goal_timeout:
+                return
+        if self.last_status_code not in (2, 4, 5, 8):
+            return
+
+        reason = (
+            "last explore goal %s is stuck in terminal status %s with no new goal for %.1f s "
+            "after recovery activity"
+        ) % (
+            self.last_status_goal_id,
+            self.last_status_code,
+            (now - self.last_goal_time).to_sec(),
+        )
+        self.restart_explore(reason)
 
 
 if __name__ == "__main__":

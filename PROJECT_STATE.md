@@ -79,9 +79,24 @@
 - Stale Gazebo processes can cause `SpawnModel: Failure - entity already exists.` between back-to-back world launches.
 - The RB1 robot geometry is cylindrical; `robot_radius` is the correct model for costmap tuning.
 - The frontier stack uses a dedicated frontier-only `move_base` and corrected frontier RViz config.
-- The frontier goal guard prevents repeated bad-frontier retry and the startup regression was fixed by requiring repeated recovery before blacklisting.
-- Current remaining frontier issue is post-passage wall-hugging / entering the local inflated area.
-- The next tuning focus should be frontier local costmap gradient and local planner wall clearance, not footprint-shape changes.
+- The frontier goal guard exists and blacklists only after repeated recovery on the same active goal.
+- Repeated bad-corner reattack was reduced by the guard.
+- The startup regression introduced by the guard was fixed.
+- Current verified frontier global costmap baseline:
+- `inflation_radius: 0.33`
+- `cost_scaling_factor: 4.0`
+- Current verified frontier local costmap baseline:
+- `inflation_radius: 0.34`
+- `cost_scaling_factor: 3.0`
+- Current verified frontier local planner baseline includes:
+- `max_vel_x: 0.16`
+- `occdist_scale: 0.31`
+- `sim_time: 1.0`
+- Current reported improvement: post-pass wall-hugging improved in the tested failure mode.
+- Current caution: do not yet claim full end-to-end perfect exploration in every long run.
+- Do not revisit footprint-shape changes; future tuning should keep using `robot_radius`.
+- Do not blindly retune inflation without runtime evidence.
+- Prefer frontier-only minimal changes and base next work on observed long-run behavior rather than restarting older solved debugging branches.
 - For frontier work, Codex should test changes itself and avoid asking the user to run diagnostic commands whenever possible.
 
 # Daily Commands

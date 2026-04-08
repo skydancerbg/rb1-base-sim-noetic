@@ -2,7 +2,7 @@ TrajectoryPlannerROS:
   acc_lim_x: 0.8
   acc_lim_y: 0.0
   acc_lim_theta: 0.9
-  max_vel_x: 0.15
+  max_vel_x: 0.16
   min_vel_x: 0.05
   max_vel_theta: 0.55
   min_vel_theta: -0.55
@@ -20,7 +20,7 @@ TrajectoryPlannerROS:
   meter_scoring: true
   pdist_scale: 0.5
   gdist_scale: 0.7
-  occdist_scale: 0.35
+  occdist_scale: 0.31
   heading_lookahead: 0.15
   heading_scoring: false
   dwa: true

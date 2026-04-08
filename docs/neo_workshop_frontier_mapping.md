@@ -156,19 +156,36 @@ The frontier-only stack is intentionally separate from normal navigation:
   - `NavfnROS` produces a real global path
   - `move_base` publishes `cmd_vel`
 - The corrected frontier RViz config now visualizes the active frontier plans and relevant costmap layers instead of stale TEB topics.
-- The startup regression introduced by the goal guard was fixed by requiring repeated recovery before blacklisting a frontier region.
+- The frontier goal guard exists and now blacklists only after repeated recovery on the same active goal.
+- Repeated bad-corner reattack was reduced by the guard.
+- The startup regression introduced by the goal guard was fixed.
 - The robot geometry should continue to be modeled with `robot_radius`; the RB1 in this simulation is cylindrical.
+
+## Current Verified Baselines
+
+- Frontier global costmap baseline:
+  - `inflation_radius: 0.33`
+  - `cost_scaling_factor: 4.0`
+- Frontier local costmap baseline:
+  - `inflation_radius: 0.34`
+  - `cost_scaling_factor: 3.0`
+- Frontier local planner baseline includes:
+  - `max_vel_x: 0.16`
+  - `occdist_scale: 0.31`
+  - `sim_time: 1.0`
 
 ## Current Remaining Issue
 
-- The main remaining frontier issue is post-passage wall-hugging:
-  - the robot can get through the passage
-  - then it can still drive too close to the wall and enter the local inflated area
-- The next tuning focus should stay on:
-  - frontier global/local inflation split
-  - frontier local costmap gradient
+- The robot can start correctly and pass through the opening/passage.
+- Post-pass wall-hugging improved in the tested failure mode.
+- Current caution: do not yet claim full end-to-end perfect exploration in every long run.
+- Future tuning, if needed, should stay focused on:
+  - frontier global/local inflation behavior
   - frontier local planner wall-clearance behavior
-- Do not spend time on explicit footprint-shape changes for this robot unless explicitly requested.
+  - long-run observed frontier behavior
+- Do not spend time on explicit footprint-shape changes or polygon footprint ideas for this robot unless explicitly requested.
+- Do not blindly retune inflation without runtime evidence.
+- Prefer frontier-only minimal changes and avoid reopening earlier solved debugging branches unless new evidence clearly points back to them.
 
 ## Recommended Workflow
 
