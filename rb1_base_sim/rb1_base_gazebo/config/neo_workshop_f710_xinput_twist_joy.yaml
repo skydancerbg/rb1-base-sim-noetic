@@ -1,0 +1,15 @@
+# Logitech F710 in XInput mode over usbip as observed here:
+# axes: X, Y, Z, Rx, Ry, Rz, Hat0X, Hat0Y
+# buttons: BtnA, BtnB, BtnX, BtnY, BtnTL, BtnTR, BtnSelect, BtnStart, BtnMode, BtnThumbL, BtnThumbR
+require_enable_button: true
+enable_button: 5
+
+axis_linear:
+  x: 4
+scale_linear:
+  x: -0.35
+
+axis_angular:
+  yaw: 0
+scale_angular:
+  yaw: 0.8

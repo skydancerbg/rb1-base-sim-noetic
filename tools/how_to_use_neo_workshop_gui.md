@@ -2,6 +2,13 @@
 
 The GUI launcher opens separate `gnome-terminal` windows for the verified neo_workshop workflow so you do not need to manage multiple terminals manually.
 
+Current active operator path:
+
+- Manual mapping in `neo_workshop.world`
+- Logitech F710 in X mode over usbip
+- Save maps with `./tools/save_neo_workshop_map.sh`
+- Frontier/autonomous files are preserved but are not the current active path
+
 ## Commands
 
 Start mapping plus automap:
@@ -73,6 +80,11 @@ Show help:
 - Repo root: `~/catkin_ws/src`
 - Workspace root: `~/catkin_ws`
 - The script requires `gnome-terminal`
+- The current active manual path is launched directly with:
+  - `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true'`
+- Optional manual debug helper:
+  - `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true echo_pad_cmd_vel:=true'`
+- The current manual path uses `teleop_twist_joy`, not `rb1_base_pad`, for joystick driving.
 - The script reuses:
   - `./tools/kill_gazebo_ros.sh`
   - `./tools/run_neo_workshop.sh`

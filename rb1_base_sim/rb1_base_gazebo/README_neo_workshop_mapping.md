@@ -8,7 +8,24 @@ Real runtime topics:
 - Map: `/robot/map`
 - Base velocity command: `/robot/robotnik_base_control/cmd_vel`
 
-The mapping launch does not start `neo_workshop_auto_map.py` unless `launch_auto_map:=true` is set. The default is `launch_auto_map:=false`.
+The current active operator path is manual mapping in `neo_workshop.world` using `rb1_neo_workshop_manual_mapping.launch`.
+Autonomous/frontier files are preserved in the repo, but they are not the current active operator path.
+
+Current manual joystick assumptions:
+
+- Device: `/dev/input/js1`
+- Controller: Logitech F710 in X mode over usbip
+- Joystick driver path: `joy_node -> /robot/joy -> teleop_twist_joy -> /robot/pad_teleop/cmd_vel -> twist_mux -> /robot/robotnik_base_control/cmd_vel`
+- Active manual mapping:
+  - `enable_button = 5`
+  - `axis_linear.x = 4`
+  - `axis_angular.yaw = 0`
+  - `scale_linear.x = -0.35`
+  - `scale_angular.yaw = 0.8`
+
+Legacy note:
+
+- Older DirectInput / D-mode / `rb1_base_pad` joystick notes are not the active manual path anymore.
 
 Build:
 
@@ -16,22 +33,28 @@ Build:
 bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && catkin_make'
 ```
 
-Launch mapping:
+Launch the current active manual mapping path with RViz:
+
+```bash
+bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true'
+```
+
+Launch the current manual path with `/robot/pad_teleop/cmd_vel` echo enabled:
+
+```bash
+bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true echo_pad_cmd_vel:=true'
+```
+
+Legacy mapping launch kept in the repo:
 
 ```bash
 bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_mapping.launch'
 ```
 
-Launch mapping and auto-start the script from the same launch:
+Save the manual map while the mapping launch stays running:
 
 ```bash
-bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_mapping.launch launch_auto_map:=true'
-```
-
-Run the auto-mapping script manually:
-
-```bash
-bash -lc 'source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && rosrun rb1_base_gazebo neo_workshop_auto_map.py'
+bash -lc 'cd ~/catkin_ws/src && ./tools/save_neo_workshop_map.sh'
 ```
 
 Check the saved map files:

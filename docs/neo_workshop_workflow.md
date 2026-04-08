@@ -2,14 +2,22 @@
 
 This repository includes helper scripts under `tools/` so you do not need to retype the long ROS setup and launch commands each time.
 
+Current active path:
+
+- Manual mapping in `neo_workshop.world`
+- Logitech F710 in X mode over usbip
+- `rb1_neo_workshop_manual_mapping.launch`
+- Autonomous/frontier files are preserved but are not the current active operator path
+
 # Workflow Order
 
 1. Build the workspace.
-2. Launch the neo_workshop mapping world.
-3. Run the automap script to create or recreate the map.
-4. Verify that the saved map files exist.
-5. Launch neo_workshop navigation using the saved map.
-6. Launch the original demo navigation when you want the baseline demo world instead.
+2. Launch the manual neo_workshop mapping world with RViz.
+3. Drive the robot manually to build the map.
+4. Save the map with `tools/save_neo_workshop_map.sh` while mapping stays running.
+5. Verify that the saved map files exist.
+6. Launch neo_workshop navigation using the saved map.
+7. Launch the original demo navigation only when you want the baseline demo world instead.
 
 # Command Shortcuts
 
@@ -19,16 +27,23 @@ Build the workspace:
 tools/run_neo_workshop.sh build
 ```
 
-Launch mapping:
+Launch the current active manual mapping path with RViz:
 
 ```bash
-tools/run_neo_workshop.sh mapping
+bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true'
 ```
 
-Run the automap script:
+Launch the current manual path with `/robot/pad_teleop/cmd_vel` echo enabled:
 
 ```bash
-tools/run_neo_workshop.sh automap
+bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true echo_pad_cmd_vel:=true'
+```
+
+Save the manual map:
+
+```bash
+cd ~/catkin_ws/src
+./tools/save_neo_workshop_map.sh
 ```
 
 Check the saved map files:
@@ -57,15 +72,24 @@ tools/kill_gazebo_ros.sh
 
 # What Each Step Does
 
-- Mapping launch:
-- Starts `rb1_neo_workshop_mapping.launch`
+- Manual mapping launch:
+- Starts `rb1_neo_workshop_manual_mapping.launch`
 - Brings up the neo_workshop world with gmapping
-- Does not auto-run `neo_workshop_auto_map.py` unless `launch_auto_map:=true` is explicitly passed
+- Keeps RViz available when `launch_rviz:=true` is used
+- Uses `joy_node` on `/dev/input/js1`
+- Uses Logitech F710 in X mode over usbip
+- Uses `teleop_twist_joy`, not `rb1_base_pad`, for the current joystick-driving path
+- Uses:
+  - `enable_button = 5`
+  - `axis_linear.x = 4`
+  - `axis_angular.yaw = 0`
+  - `scale_linear.x = -0.35`
+  - `scale_angular.yaw = 0.8`
+- Supports `echo_pad_cmd_vel:=true` to run `rostopic echo /robot/pad_teleop/cmd_vel`
 
-- Automap script:
-- Runs `neo_workshop_auto_map.py`
-- Uses the real scan topic `/robot/front_laser/scan`
-- Drives the robot and saves the map into `rb1_base_localization/maps/neo_workshop/`
+- Preserved autonomous path:
+- `rb1_neo_workshop_mapping.launch` and `neo_workshop_auto_map.py` remain in the repo
+- They are not the current active operator path
 
 - Navigation launch:
 - Starts `rb1_neo_workshop_navigation.launch`

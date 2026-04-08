@@ -29,9 +29,17 @@
 - Require real runtime verification, not syntax-only checks.
 - After changes, provide exact commands used and exact commands to rerun.
 - The RB1 robot in this simulation is cylindrical; `robot_radius` is the correct geometry model for navigation tuning. Do not spend time on explicit footprint-shape changes unless explicitly requested.
+- Do not ask for full file dumps when updating or reviewing repo state; prefer concise, evidence-driven summaries.
+- Prefer evidence-driven localized changes and avoid reopening solved branches unless new runtime evidence clearly requires it.
 
 # neo_workshop Entry Points
 
+- Current active manual mapping launch:
+- `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true'`
+- Current active manual mapping launch with cmd_vel echo helper:
+- `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true echo_pad_cmd_vel:=true'`
+- Save the manual map while mapping stays running:
+- `bash -lc 'cd ~/catkin_ws/src && ./tools/save_neo_workshop_map.sh'`
 - Mapping launch:
 - `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_mapping.launch'`
 - Manual automap:
@@ -48,10 +56,25 @@
 - Real scan topic: `/robot/front_laser/scan`
 - Map topic: `/robot/map`
 - Velocity command topic: `/robot/robotnik_base_control/cmd_vel`
+- Current active operator path is manual mapping, not autonomous/frontier mapping.
+- Current manual joystick device: `/dev/input/js1`
+- Current manual controller mode: Logitech F710 in X mode over usbip
+- Current manual joystick path:
+- `/dev/input/js1 -> /robot/joy_node -> /robot/joy -> /robot/teleop_twist_joy -> /robot/pad_teleop/cmd_vel -> /robot/twist_mux -> /robot/robotnik_base_control/cmd_vel`
+- Current manual mapping does not rely on `rb1_base_pad` for joystick driving.
+- Current manual X-mode teleop mapping:
+- `enable_button = 5`
+- `axis_linear.x = 4`
+- `axis_angular.yaw = 0`
+- `scale_linear.x = -0.35`
+- `scale_angular.yaw = 0.8`
+- Optional manual debug helper:
+- `echo_pad_cmd_vel:=true`
 - Mapping launch default does not auto-run `neo_workshop_auto_map.py`
 - Saved map files:
 - `~/catkin_ws/src/rb1_base_common/rb1_base_localization/maps/neo_workshop/neo_workshop.yaml`
 - `~/catkin_ws/src/rb1_base_common/rb1_base_localization/maps/neo_workshop/neo_workshop.pgm`
+- Autonomous/frontier files are preserved but are not the current active operator path.
 - Frontier stack is integrated and uses `explore_lite` with a dedicated frontier-only `move_base`
 - Frontier goal guard exists at:
 - `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/scripts/neo_workshop_frontier_goal_guard.py`
@@ -60,6 +83,7 @@
 
 # Frontier Notes
 
+- Frontier/autonomous work is intentionally paused for now.
 - The frontier stack no longer uses TEB topics; the active plan topics are:
 - `/robot/move_base/NavfnROS/plan`
 - `/robot/move_base/TrajectoryPlannerROS/global_plan`
@@ -82,7 +106,7 @@
 - Current caution: do not claim full end-to-end perfect exploration in every long run yet.
 - Do not revisit polygon footprint ideas for this robot.
 - Do not blindly retune inflation without runtime evidence.
-- Prefer frontier-only minimal changes and base next work on observed long-run behavior, not on reopening older solved debugging branches.
+- Preserve frontier files, but do not reopen frontier/autonomous branches unless new evidence directly requires it.
 
 # Known Issue
 

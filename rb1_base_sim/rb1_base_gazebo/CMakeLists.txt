@@ -26,6 +26,9 @@ install(DIRECTORY worlds
 install(DIRECTORY rviz
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
+install(DIRECTORY config
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
 install(PROGRAMS
         scripts/neo_workshop_auto_map.py
         scripts/neo_workshop_frontier_goal_guard.py

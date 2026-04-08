@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="launch_rviz" default="false"/>
+  <arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_base.rviz"/>
+  <arg name="teleop_config" default="$(find rb1_base_gazebo)/config/neo_workshop_f710_xinput_twist_joy.yaml"/>
+  <arg name="echo_pad_cmd_vel" default="false"/>
+
+  <include file="$(find rb1_base_gazebo)/launch/rb1_neo_workshop_mapping.launch">
+    <arg name="launch_rviz" value="$(arg launch_rviz)"/>
+    <arg name="rviz_config" value="$(arg rviz_config)"/>
+    <arg name="launch_auto_map" value="false"/>
+  </include>
+
+  <group ns="robot">
+    <node pkg="joy" type="joy_node" name="joy_node" output="screen" respawn="true">
+      <rosparam command="load" file="$(find rb1_base_gazebo)/config/neo_workshop_joy.yaml"/>
+    </node>
+
+    <node name="teleop_twist_joy" pkg="teleop_twist_joy" type="teleop_node" output="screen">
+      <rosparam command="load" file="$(arg teleop_config)"/>
+      <remap from="cmd_vel" to="pad_teleop/cmd_vel"/>
+    </node>
+
+    <node if="$(arg echo_pad_cmd_vel)"
+          name="echo_pad_cmd_vel"
+          pkg="rostopic"
+          type="rostopic"
+          output="screen"
+          args="echo /robot/pad_teleop/cmd_vel"/>
+  </group>
+</launch>

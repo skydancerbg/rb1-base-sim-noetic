@@ -1,0 +1,22 @@
+# Logitech F710 in XInput mode, as typically exposed over usbip.
+pad_type: xbox360
+num_of_buttons: 17
+
+axis_linear_x: 1
+axis_angular: 2
+axis_linear_z: 5
+
+# Conservative manual-mapping speeds.
+scale_linear: 0.35
+scale_angular: 0.8
+scale_linear_z: 0.0
+
+button_speed_up: 7
+button_speed_down: 4
+button_dead_man: 9
+
+cmd_service_home: robot_controller/home
+check_message_timeout: false
+
+# Match the repo's xbox-style profile and disable elevator motion from triggers.
+axis_elevator: -1
