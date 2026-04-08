@@ -33,6 +33,7 @@
 |     |  |- rb1_neo_workshop_frontier_mapping.launch  (preserved, not the current active operator path)
 |     |  `- rb1navindemoworl.launch
 |     |- scripts/
+|     |  |- manual_speed_selector.py
 |     |  `- neo_workshop_auto_map.py  (preserved, do not modify unless explicitly requested)
 |     |- rviz/
 |     |  |- rb1_base.rviz
@@ -64,4 +65,4 @@
          `- amcl_resample.py
 ```
 
-Current active operator path: `rb1_neo_workshop_manual_mapping.launch` + `neo_workshop_joy.yaml` + `neo_workshop_f710_xinput_twist_joy.yaml` + `tools/save_neo_workshop_map.sh`
+Current active operator path: `rb1_neo_workshop_manual_mapping.launch` + `neo_workshop_joy.yaml` + `neo_workshop_f710_xinput_twist_joy.yaml` + `manual_speed_selector.py` + `tools/save_neo_workshop_map.sh`

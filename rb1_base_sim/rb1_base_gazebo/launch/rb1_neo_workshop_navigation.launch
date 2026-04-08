@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="launch_rviz" default="true"/>
-  <arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_neo_workshop_navigation.rviz"/>
+  <arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_base.rviz"/>
 
   <include file="$(find rb1_base_gazebo)/launch/rb1_base_gazebo.launch">
     <arg name="launch_rviz" value="$(arg launch_rviz)"/>

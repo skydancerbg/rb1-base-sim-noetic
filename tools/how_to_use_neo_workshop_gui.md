@@ -11,7 +11,7 @@ Current active operator path:
 
 ## Commands
 
-Start mapping plus automap:
+Start mapping plus automap (preserved helper, not the current active manual path):
 
 ```bash
 ./tools/neo_workshop_gui.sh map
@@ -42,6 +42,8 @@ Show help:
 ```
 
 ## What `map` Does
+
+This preserved helper still opens the older mapping-plus-automap flow. The current active operator path for neo_workshop is the direct manual mapping launch documented below.
 
 1. Opens a terminal for:
    `cd ~/catkin_ws/src && ./tools/kill_gazebo_ros.sh && ./tools/run_neo_workshop.sh mapping`
@@ -84,7 +86,14 @@ Show help:
   - `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true'`
 - Optional manual debug helper:
   - `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true echo_pad_cmd_vel:=true'`
-- The current manual path uses `teleop_twist_joy`, not `rb1_base_pad`, for joystick driving.
+- The current manual path uses `teleop_twist_joy` plus `manual_speed_selector.py`, not `rb1_base_pad`, for joystick driving.
+- Current manual speed modes:
+  - D-pad up = `TURBO`
+  - D-pad down = `NORMAL`
+- Save the manual map with:
+  - `cd ~/catkin_ws/src && ./tools/save_neo_workshop_map.sh`
+- Launch saved-map navigation with:
+  - `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_navigation.launch'`
 - The script reuses:
   - `./tools/kill_gazebo_ros.sh`
   - `./tools/run_neo_workshop.sh`

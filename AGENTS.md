@@ -60,14 +60,20 @@
 - Current manual joystick device: `/dev/input/js1`
 - Current manual controller mode: Logitech F710 in X mode over usbip
 - Current manual joystick path:
-- `/dev/input/js1 -> /robot/joy_node -> /robot/joy -> /robot/teleop_twist_joy -> /robot/pad_teleop/cmd_vel -> /robot/twist_mux -> /robot/robotnik_base_control/cmd_vel`
+- `/dev/input/js1 -> /robot/joy_node -> /robot/joy -> /robot/teleop_twist_joy -> /robot/pad_teleop/cmd_vel_raw -> /robot/manual_speed_selector -> /robot/pad_teleop/cmd_vel -> /robot/twist_mux -> /robot/robotnik_base_control/cmd_vel`
 - Current manual mapping does not rely on `rb1_base_pad` for joystick driving.
-- Current manual X-mode teleop mapping:
+- Current manual path uses `teleop_twist_joy` plus `manual_speed_selector.py`.
+- Current manual stick behavior:
 - `enable_button = 5`
-- `axis_linear.x = 4`
-- `axis_angular.yaw = 0`
-- `scale_linear.x = -0.35`
-- `scale_angular.yaw = 0.8`
+- left stick vertical `axis 1` and right stick vertical `axis 4` control forward/back
+- left stick horizontal `axis 0` and right stick horizontal `axis 3` control rotation
+- base linear scale `0.35`
+- base angular scale `0.8`
+- Current manual speed mode latch:
+- D-pad up = `TURBO`
+- D-pad down = `NORMAL`
+- `NORMAL = 1.0`
+- `TURBO = 1.6`
 - Optional manual debug helper:
 - `echo_pad_cmd_vel:=true`
 - Mapping launch default does not auto-run `neo_workshop_auto_map.py`
@@ -84,6 +90,7 @@
 # Frontier Notes
 
 - Frontier/autonomous work is intentionally paused for now.
+- Do not reopen solved D-mode / `rb1_base_pad` / RViz-config confusion branches unless new runtime evidence requires it.
 - The frontier stack no longer uses TEB topics; the active plan topics are:
 - `/robot/move_base/NavfnROS/plan`
 - `/robot/move_base/TrajectoryPlannerROS/global_plan`

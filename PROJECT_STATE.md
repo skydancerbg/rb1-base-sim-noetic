@@ -18,22 +18,30 @@
 - Controller mode for the current manual path:
 - Logitech F710 in X mode over usbip
 - Manual control no longer relies on `rb1_base_pad` for joystick driving
-- Manual mapping now uses `teleop_twist_joy`
+- Manual mapping now uses `teleop_twist_joy` plus a manual-only speed selector
 - Active manual control path:
 - `/dev/input/js1`
 - `/robot/joy_node`
 - `/robot/joy`
 - `/robot/teleop_twist_joy`
+- `/robot/pad_teleop/cmd_vel_raw`
+- `/robot/manual_speed_selector`
 - `/robot/pad_teleop/cmd_vel`
 - `/robot/twist_mux`
 - `/robot/robotnik_base_control/cmd_vel`
 - Gazebo
 - Active manual X-mode mapping:
 - `enable_button = 5`
-- `axis_linear.x = 4`
-- `axis_angular.yaw = 0`
-- `scale_linear.x = -0.35`
-- `scale_angular.yaw = 0.8`
+- left stick vertical `axis 1` and right stick vertical `axis 4` control forward/back
+- left stick horizontal `axis 0` and right stick horizontal `axis 3` control rotation
+- base linear scale `0.35`
+- base angular scale `0.8`
+- Manual speed mode latch:
+- D-pad up (`Hat0Y <= -0.5`) = `TURBO`
+- D-pad down (`Hat0Y >= 0.5`) = `NORMAL`
+- Manual speed multipliers:
+- `NORMAL = 1.0`
+- `TURBO = 1.6`
 - Optional manual debug helper:
 - `echo_pad_cmd_vel:=true`
 - This starts `rostopic echo /robot/pad_teleop/cmd_vel`
@@ -43,6 +51,10 @@
 - `~/catkin_ws/src/rb1_base_common/rb1_base_localization/maps/neo_workshop/neo_workshop.yaml`
 - `~/catkin_ws/src/rb1_base_common/rb1_base_localization/maps/neo_workshop/neo_workshop.pgm`
 - `rb1_neo_workshop_navigation.launch` works with the saved map
+- Current verified navigation RViz launch path is:
+- `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/launch/rb1_neo_workshop_navigation.launch`
+- and it launches:
+- `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/rviz/rb1_base.rviz`
 - `rb1navindemoworl.launch` still works and must remain untouched
 - `neo_workshop_auto_map.py` is preserved and must not be modified unless explicitly requested
 - Frontier/autonomous work is preserved in the repo but is temporarily deprioritized and is not the current active operator path
@@ -70,6 +82,7 @@
 - `/gazebo_gui`
 - `/robot/joy_node`
 - `/robot/teleop_twist_joy`
+- `/robot/manual_speed_selector`
 - `/robot/slam_gmapping`
 - `/robot/twist_mux`
 - `/robot/robot_state_publisher`
@@ -102,8 +115,12 @@
 
 - Prefer `rb1_neo_workshop_manual_mapping.launch` for current neo_workshop work.
 - The current manual path uses Logitech F710 in X mode over usbip.
-- The current manual path uses `teleop_twist_joy`, not `rb1_base_pad`, for joystick driving.
+- The current manual path uses `teleop_twist_joy` plus `manual_speed_selector.py`, not `rb1_base_pad`, for joystick driving.
 - Older D-mode / DirectInput / `rb1_base_pad` joystick notes are legacy for the current manual path and should not be treated as active guidance.
+- The active manual joystick chain includes `/robot/pad_teleop/cmd_vel_raw` before the final `/robot/pad_teleop/cmd_vel`.
+- D-pad speed selection is current active behavior for manual mapping:
+- up = `TURBO`
+- down = `NORMAL`
 - `rb1_neo_workshop_mapping.launch` does not auto-run `neo_workshop_auto_map.py` by default.
 - Auto-start is only enabled if `launch_auto_map:=true` is passed.
 - Stale Gazebo processes can cause `SpawnModel: Failure - entity already exists.` between back-to-back world launches.
@@ -140,6 +157,8 @@
 - `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true echo_pad_cmd_vel:=true'`
 - Save manual map:
 - `cd ~/catkin_ws/src && ./tools/save_neo_workshop_map.sh`
+- Active saved-map navigation:
+- `bash -lc 'cd ~/catkin_ws && source /opt/ros/noetic/setup.bash && source ~/catkin_ws/devel/setup.bash && roslaunch rb1_base_gazebo rb1_neo_workshop_navigation.launch'`
 - Legacy mapping launch:
 - `tools/run_neo_workshop.sh mapping`
 - Automap:

@@ -11,11 +11,13 @@
 - Current controller mode:
 - Logitech F710 in X mode over usbip
 - Active manual control path:
-- `/robot/joy -> /robot/teleop_twist_joy -> /robot/pad_teleop/cmd_vel -> /robot/twist_mux -> /robot/robotnik_base_control/cmd_vel`
+- `/robot/joy -> /robot/teleop_twist_joy -> /robot/pad_teleop/cmd_vel_raw -> /robot/manual_speed_selector -> /robot/pad_teleop/cmd_vel -> /robot/twist_mux -> /robot/robotnik_base_control/cmd_vel`
 - Active joy config:
 - `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/config/neo_workshop_joy.yaml`
 - Active teleop config:
 - `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/config/neo_workshop_f710_xinput_twist_joy.yaml`
+- Manual speed selector:
+- `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/scripts/manual_speed_selector.py`
 - Map save helper:
 - `~/catkin_ws/src/tools/save_neo_workshop_map.sh`
 - Map outputs:
@@ -25,6 +27,8 @@
 - `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/README_neo_workshop_mapping.md`
 - neo_workshop workflow doc:
 - `~/catkin_ws/src/docs/neo_workshop_workflow.md`
+- Active navigation launch:
+- `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/launch/rb1_neo_workshop_navigation.launch`
 - Preserved but non-active operator paths:
 - frontier/autonomous neo_workshop files remain in the repo, but they are not the current active operator path
 

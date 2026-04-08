@@ -15,13 +15,16 @@ Current manual joystick assumptions:
 
 - Device: `/dev/input/js1`
 - Controller: Logitech F710 in X mode over usbip
-- Joystick driver path: `joy_node -> /robot/joy -> teleop_twist_joy -> /robot/pad_teleop/cmd_vel -> twist_mux -> /robot/robotnik_base_control/cmd_vel`
+- Joystick driver path: `joy_node -> /robot/joy -> teleop_twist_joy -> /robot/pad_teleop/cmd_vel_raw -> manual_speed_selector -> /robot/pad_teleop/cmd_vel -> twist_mux -> /robot/robotnik_base_control/cmd_vel`
 - Active manual mapping:
   - `enable_button = 5`
-  - `axis_linear.x = 4`
-  - `axis_angular.yaw = 0`
-  - `scale_linear.x = -0.35`
-  - `scale_angular.yaw = 0.8`
+  - both sticks drive
+  - left stick vertical `axis 1` and right stick vertical `axis 4` control forward/back
+  - left stick horizontal `axis 0` and right stick horizontal `axis 3` control rotation
+  - base linear scale `0.35`
+  - base angular scale `0.8`
+  - D-pad up = `TURBO`
+  - D-pad down = `NORMAL`
 
 Legacy note:
 
@@ -74,6 +77,5 @@ Gazebo cleanup note:
 Back-to-back launches can leave stale `gzserver` or `gzclient` processes running, which can cause `SpawnModel: Failure - entity already exists.` If that happens, stop the old Gazebo processes before relaunching:
 
 ```bash
-pkill -f gzserver || true
-pkill -f gzclient || true
+bash -lc 'cd ~/catkin_ws/src && ./tools/kill_gazebo_ros.sh'
 ```

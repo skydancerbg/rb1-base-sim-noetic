@@ -41,11 +41,49 @@ rosdep install --from-paths src --ignore-src -y
 ### 3) Build
 
 ```bash
-catkin build
+cd ~/catkin_ws
+source /opt/ros/noetic/setup.bash
+catkin_make
 source devel/setup.bash
 ```
 
 ## Usage
+
+### neo_workshop operator workflow
+
+Current active operator path:
+- manual mapping in `neo_workshop.world`
+- Logitech F710 in X mode over usbip on `/dev/input/js1`
+- saved-map navigation using the manually saved `neo_workshop` map
+
+Launch manual mapping with RViz:
+
+```bash
+cd ~/catkin_ws
+source /opt/ros/noetic/setup.bash
+source ~/catkin_ws/devel/setup.bash
+roslaunch rb1_base_gazebo rb1_neo_workshop_manual_mapping.launch launch_rviz:=true
+```
+
+Save the map while mapping stays running:
+
+```bash
+cd ~/catkin_ws/src
+./tools/save_neo_workshop_map.sh
+```
+
+Saved map output:
+- `rb1_base_common/rb1_base_localization/maps/neo_workshop/neo_workshop.yaml`
+- `rb1_base_common/rb1_base_localization/maps/neo_workshop/neo_workshop.pgm`
+
+Launch neo_workshop saved-map navigation:
+
+```bash
+cd ~/catkin_ws
+source /opt/ros/noetic/setup.bash
+source ~/catkin_ws/devel/setup.bash
+roslaunch rb1_base_gazebo rb1_neo_workshop_navigation.launch
+```
 
 ### Launching the simulation
 To launch a single RB-1 Base robot in a default demo world:

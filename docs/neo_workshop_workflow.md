@@ -78,13 +78,15 @@ tools/kill_gazebo_ros.sh
 - Keeps RViz available when `launch_rviz:=true` is used
 - Uses `joy_node` on `/dev/input/js1`
 - Uses Logitech F710 in X mode over usbip
-- Uses `teleop_twist_joy`, not `rb1_base_pad`, for the current joystick-driving path
+- Uses `teleop_twist_joy` plus `manual_speed_selector.py`, not `rb1_base_pad`, for the current joystick-driving path
 - Uses:
   - `enable_button = 5`
-  - `axis_linear.x = 4`
-  - `axis_angular.yaw = 0`
-  - `scale_linear.x = -0.35`
-  - `scale_angular.yaw = 0.8`
+  - left stick vertical `axis 1` and right stick vertical `axis 4` control forward/back
+  - left stick horizontal `axis 0` and right stick horizontal `axis 3` control rotation
+  - base linear scale `0.35`
+  - base angular scale `0.8`
+  - D-pad up = `TURBO`
+  - D-pad down = `NORMAL`
 - Supports `echo_pad_cmd_vel:=true` to run `rostopic echo /robot/pad_teleop/cmd_vel`
 
 - Preserved autonomous path:
@@ -94,7 +96,7 @@ tools/kill_gazebo_ros.sh
 - Navigation launch:
 - Starts `rb1_neo_workshop_navigation.launch`
 - Loads `neo_workshop.yaml`
-- Starts map server, AMCL, move_base, and the matching RViz config `rb1_neo_workshop_navigation.rviz`
+- Starts map server, AMCL, move_base, and RViz through the current navigation launch path
 
 - Demo launch:
 - Starts `rb1navindemoworl.launch`
