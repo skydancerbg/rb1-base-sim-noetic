@@ -19,6 +19,7 @@
 
 	<!-- Import all available sensors -->
 	<xacro:include filename="$(find robotnik_sensors)/urdf/all_sensors.urdf.xacro" />
+	<xacro:include filename="$(find rb1_base_description)/urdf/sensors/usb_cam_webcam.urdf.xacro" />
 
 	<!-- Import Gazebo Stuff -->
 	<xacro:include filename="$(find rb1_base_description)/urdf/common.gazebo.xacro" />
@@ -102,6 +103,10 @@
 	<xacro:sensor_orbbec_astra prefix="$(arg prefix)front_rgbd_camera" parent="$(arg prefix)base_link" prefix_topic="front_rgbd_camera">
 		<origin xyz="0.234 0.0 0.092" rpy="0 0 0"/>
 	</xacro:sensor_orbbec_astra>
+
+	<xacro:sensor_usb_cam_webcam prefix="$(arg prefix)usb_cam" parent="$(arg prefix)top_cover_link" camera_name="usb_cam">
+		<origin xyz="0 0 0.48" rpy="0 0 0"/>
+	</xacro:sensor_usb_cam_webcam>
 
 	<!-- Gazebo ros control plugins -->
 	<xacro:ros_control/>

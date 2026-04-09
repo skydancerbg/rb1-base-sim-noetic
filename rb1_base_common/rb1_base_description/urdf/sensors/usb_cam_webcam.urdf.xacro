@@ -1,0 +1,157 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="sensor_usb_cam_webcam" params="prefix parent camera_name:='usb_cam' *origin">
+    <joint name="${prefix}_mast_joint" type="fixed">
+      <xacro:insert_block name="origin"/>
+      <parent link="${parent}"/>
+      <child link="${prefix}_mast_link"/>
+    </joint>
+
+    <link name="${prefix}_mast_link">
+      <inertial>
+        <mass value="0.35"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:solid_cylinder_inertia m="0.35" r="0.01" h="0.96"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.01" length="0.96"/>
+        </geometry>
+        <material name="usb_cam_mast_aluminum">
+          <color rgba="0.78 0.80 0.82 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.012" length="0.96"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${prefix}_joint" type="fixed">
+      <origin xyz="0 0 0.957" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${prefix}_link"/>
+    </joint>
+
+    <link name="${prefix}_link">
+      <inertial>
+        <mass value="0.18"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:solid_cuboid_inertia m="0.18" h="0.042" d="0.03" w="0.095"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rb1_base_description/meshes/sensors/usb_cam_c922_style.dae"/>
+        </geometry>
+        <material name="usb_cam_body_charcoal">
+          <color rgba="0.12 0.12 0.13 1.0"/>
+        </material>
+      </visual>
+      <visual>
+        <origin xyz="0.017 0 0" rpy="0 1.57079632679 0"/>
+        <geometry>
+          <cylinder radius="0.0105" length="0.008"/>
+        </geometry>
+        <material name="usb_cam_lens_ring">
+          <color rgba="0.05 0.05 0.05 1.0"/>
+        </material>
+      </visual>
+      <visual>
+        <origin xyz="0.0215 0 0" rpy="0 1.57079632679 0"/>
+        <geometry>
+          <cylinder radius="0.007" length="0.004"/>
+        </geometry>
+        <material name="usb_cam_lens_glass">
+          <color rgba="0.08 0.12 0.16 1.0"/>
+        </material>
+      </visual>
+      <visual>
+        <origin xyz="-0.015 0 -0.026" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.028 0.025 0.012"/>
+        </geometry>
+        <material name="usb_cam_mount_dark">
+          <color rgba="0.16 0.16 0.17 1.0"/>
+        </material>
+      </visual>
+      <visual>
+        <origin xyz="-0.008 0 -0.038" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.045 0.050 0.006"/>
+        </geometry>
+        <material name="usb_cam_mount_dark">
+          <color rgba="0.16 0.16 0.17 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.03 0.095 0.042"/>
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="-0.010 0 -0.029" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.038 0.05 0.025"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${prefix}_optical_joint" type="fixed">
+      <origin xyz="0.016 0 0" rpy="${-M_PI/2} 0 ${-M_PI/2}"/>
+      <parent link="${prefix}_link"/>
+      <child link="${prefix}_optical_frame"/>
+    </joint>
+
+    <link name="${prefix}_optical_frame">
+      <inertial>
+        <mass value="0.001"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:solid_cuboid_inertia m="0.001" h="0.01" d="0.01" w="0.01"/>
+      </inertial>
+    </link>
+
+    <gazebo reference="${prefix}_mast_link">
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <gazebo reference="${prefix}_link">
+      <material>Gazebo/FlatBlack</material>
+      <sensor type="camera" name="${prefix}_sensor">
+        <always_on>true</always_on>
+        <update_rate>15.0</update_rate>
+        <visualize>true</visualize>
+        <camera>
+          <horizontal_fov>${78.0*M_PI/180.0}</horizontal_fov>
+          <image>
+            <format>R8G8B8</format>
+            <width>1280</width>
+            <height>720</height>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>25.0</far>
+          </clip>
+        </camera>
+        <plugin name="${prefix}_controller" filename="libgazebo_ros_camera.so">
+          <alwaysOn>true</alwaysOn>
+          <updateRate>0.0</updateRate>
+          <cameraName>${camera_name}</cameraName>
+          <imageTopicName>image_raw</imageTopicName>
+          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+          <frameName>/${prefix}_optical_frame</frameName>
+          <hackBaseline>0.0</hackBaseline>
+          <distortionK1>0.0</distortionK1>
+          <distortionK2>0.0</distortionK2>
+          <distortionK3>0.0</distortionK3>
+          <distortionT1>0.0</distortionT1>
+          <distortionT2>0.0</distortionT2>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

@@ -5,8 +5,18 @@ This workspace uses `catkin_make`, not `catkin build`.
 Real runtime topics:
 
 - Laser scan: `/robot/front_laser/scan`
+- USB camera image: `/robot/usb_cam/image_raw`
+- USB camera info: `/robot/usb_cam/camera_info`
 - Map: `/robot/map`
 - Base velocity command: `/robot/robotnik_base_control/cmd_vel`
+
+The simulated RB1 robot now also includes a center-mounted mast camera in its robot description:
+- mounted on the centerline
+- optical frame approximately `1.2 m` above ground
+- `20 mm` light-gray mast
+- custom low-poly C922-style webcam mesh
+
+This camera addition does not change the existing neo_workshop mapping or navigation workflows.
 
 The current active operator path is manual mapping in `neo_workshop.world` using `rb1_neo_workshop_manual_mapping.launch`.
 Autonomous/frontier files are preserved in the repo, but they are not the current active operator path.

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <author>OpenAI Codex</author>
+      <authoring_tool>Manual low-poly mesh</authoring_tool>
+    </contributor>
+    <created>2026-04-09T00:00:00Z</created>
+    <modified>2026-04-09T00:00:00Z</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_effects>
+    <effect id="webcam_body_fx">
+      <profile_COMMON>
+        <technique sid="common">
+          <lambert>
+            <diffuse>
+              <color>0.12 0.12 0.13 1</color>
+            </diffuse>
+          </lambert>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_materials>
+    <material id="webcam_body_mat" name="webcam_body_mat">
+      <instance_effect url="#webcam_body_fx"/>
+    </material>
+  </library_materials>
+  <library_geometries>
+    <geometry id="usb_cam_c922_style_geo" name="usb_cam_c922_style_geo">
+      <mesh>
+        <source id="usb_cam_positions">
+          <float_array id="usb_cam_positions_array" count="54">
+            0.014 -0.040 0.021
+            0.014 0.040 0.021
+            0.014 0.0475 0.013
+            0.014 0.0475 -0.013
+            0.014 0.040 -0.021
+            0.014 -0.040 -0.021
+            0.014 -0.0475 -0.013
+            0.014 -0.0475 0.013
+            -0.016 -0.038 0.019
+            -0.016 0.038 0.019
+            -0.016 0.0445 0.011
+            -0.016 0.0445 -0.011
+            -0.016 0.038 -0.019
+            -0.016 -0.038 -0.019
+            -0.016 -0.0445 -0.011
+            -0.016 -0.0445 0.011
+            0.014 0 0
+            -0.016 0 0
+          </float_array>
+          <technique_common>
+            <accessor source="#usb_cam_positions_array" count="18" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="usb_cam_vertices">
+          <input semantic="POSITION" source="#usb_cam_positions"/>
+        </vertices>
+        <triangles count="32" material="webcam_body_mat">
+          <input semantic="VERTEX" source="#usb_cam_vertices" offset="0"/>
+          <p>
+            16 0 1  16 1 2  16 2 3  16 3 4  16 4 5  16 5 6  16 6 7  16 7 0
+            17 9 8  17 10 9  17 11 10  17 12 11  17 13 12  17 14 13  17 15 14  17 8 15
+            0 1 9  0 9 8
+            1 2 10  1 10 9
+            2 3 11  2 11 10
+            3 4 12  3 12 11
+            4 5 13  4 13 12
+            5 6 14  5 14 13
+            6 7 15  6 15 14
+            7 0 8  7 8 15
+          </p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="usb_cam_c922_style" name="usb_cam_c922_style">
+        <instance_geometry url="#usb_cam_c922_style_geo">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="webcam_body_mat" target="#webcam_body_mat"/>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>

@@ -29,6 +29,13 @@
 - `~/catkin_ws/src/docs/neo_workshop_workflow.md`
 - Active navigation launch:
 - `~/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/launch/rb1_neo_workshop_navigation.launch`
+- Simulated USB camera xacro:
+- `~/catkin_ws/src/rb1_base_common/rb1_base_description/urdf/sensors/usb_cam_webcam.urdf.xacro`
+- Simulated USB camera mesh:
+- `~/catkin_ws/src/rb1_base_common/rb1_base_description/meshes/sensors/usb_cam_c922_style.dae`
+- Simulated USB camera topics:
+- `/robot/usb_cam/image_raw`
+- `/robot/usb_cam/camera_info`
 - Preserved but non-active operator paths:
 - frontier/autonomous neo_workshop files remain in the repo, but they are not the current active operator path
 

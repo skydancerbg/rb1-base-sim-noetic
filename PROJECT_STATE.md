@@ -62,6 +62,8 @@
 # Verified Topics
 
 - Scan: `/robot/front_laser/scan`
+- USB camera image: `/robot/usb_cam/image_raw`
+- USB camera info: `/robot/usb_cam/camera_info`
 - Map: `/robot/map`
 - Map metadata: `/robot/map_metadata`
 - Particle cloud: `/robot/particlecloud`
@@ -114,6 +116,10 @@
 # Behavior Notes
 
 - Prefer `rb1_neo_workshop_manual_mapping.launch` for current neo_workshop work.
+- The simulated RB1 robot now includes a center-mounted USB camera in the robot description itself, not as a separate runtime add-on.
+- The camera is mounted on `robot_top_cover_link` with a `20 mm` light-gray mast and a custom low-poly C922-style webcam mesh.
+- Verified camera optical frame height is approximately `1.2 m` above ground.
+- Existing neo_workshop manual mapping and saved-map navigation workflows remain unchanged.
 - The current manual path uses Logitech F710 in X mode over usbip.
 - The current manual path uses `teleop_twist_joy` plus `manual_speed_selector.py`, not `rb1_base_pad`, for joystick driving.
 - Older D-mode / DirectInput / `rb1_base_pad` joystick notes are legacy for the current manual path and should not be treated as active guidance.

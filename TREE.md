@@ -43,6 +43,15 @@
 |        |- demo.world
 |        `- neo_workshop.world
 `- rb1_base_common/
+   |- rb1_base_description/
+   |  |- robots/
+   |  |  `- rb1_base.urdf.xacro
+   |  |- urdf/
+   |  |  `- sensors/
+   |  |     `- usb_cam_webcam.urdf.xacro
+   |  `- meshes/
+   |     `- sensors/
+   |        `- usb_cam_c922_style.dae
    `- rb1_base_localization/
       |- package.xml
       |- CMakeLists.txt
@@ -66,3 +75,5 @@
 ```
 
 Current active operator path: `rb1_neo_workshop_manual_mapping.launch` + `neo_workshop_joy.yaml` + `neo_workshop_f710_xinput_twist_joy.yaml` + `manual_speed_selector.py` + `tools/save_neo_workshop_map.sh`
+
+Simulated RB1 base model also includes a center-mounted USB mast camera via `rb1_base.urdf.xacro` + `usb_cam_webcam.urdf.xacro` + `usb_cam_c922_style.dae`.

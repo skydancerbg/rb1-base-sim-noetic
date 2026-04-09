@@ -54,8 +54,17 @@
 # Runtime Facts
 
 - Real scan topic: `/robot/front_laser/scan`
+- Simulated USB camera topics:
+- `/robot/usb_cam/image_raw`
+- `/robot/usb_cam/camera_info`
 - Map topic: `/robot/map`
 - Velocity command topic: `/robot/robotnik_base_control/cmd_vel`
+- The RB1 simulation robot description now includes a center-mounted USB mast camera by default.
+- Mount details:
+- parent link `robot_top_cover_link`
+- optical frame height about `1.2 m`
+- `20 mm` light-gray mast
+- custom low-poly C922-style webcam mesh
 - Current active operator path is manual mapping, not autonomous/frontier mapping.
 - Current manual joystick device: `/dev/input/js1`
 - Current manual controller mode: Logitech F710 in X mode over usbip

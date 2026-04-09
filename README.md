@@ -14,6 +14,15 @@ Common packages including:
 - **rb1_base_navigation**: ROS navigation stack integration.
 - **rb1_base_pad**: Joystick/Gamepad control logic.
 
+The simulated RB1 robot description also includes a center-mounted USB mast camera as part of the base model:
+- mounted on the robot centerline
+- optical frame approximately `1.2 m` above ground
+- `20 mm` light-gray mast
+- custom low-poly C922-style webcam mesh
+- ROS topics:
+  - `/robot/usb_cam/image_raw`
+  - `/robot/usb_cam/camera_info`
+
 ### rb1_base_sim
 Simulation-specific packages:
 - **rb1_base_gazebo**: Gazebo world files and launch configurations.
