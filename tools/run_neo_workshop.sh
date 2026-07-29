@@ -27,9 +27,57 @@ need_ros_pkg() {
     || die "Missing ROS package '${pkg}'. ${install_hint}"
 }
 
+# Gazebo camera sensors need a rendering context. This VM is headless, so unless a
+# display exists OGRE is never initialised, every camera sensor fails to be created
+# ("Unable to create CameraSensor. Rendering is disabled.") and no image topic is ever
+# published -- silently, because navigation and the laser keep working.
+# See robco-control-center/docs/inspection_camera_spec.md (plan step P0.6).
+XVFB_DISPLAY="${XVFB_DISPLAY:-:99}"
+
+display_up() {
+  local d="${1#:}"
+  d="${d%%.*}"
+  [[ -S "/tmp/.X11-unix/X${d}" ]]
+}
+
+ensure_display() {
+  if [[ -n "${DISPLAY:-}" ]] && display_up "${DISPLAY}"; then
+    log "Using existing display ${DISPLAY}"
+    return
+  fi
+  if display_up "${XVFB_DISPLAY}"; then
+    export DISPLAY="${XVFB_DISPLAY}"
+    ROBCO_VIRTUAL_DISPLAY=1
+    log "Using virtual framebuffer ${DISPLAY} (xvfb.service)"
+    return
+  fi
+  command -v Xvfb >/dev/null 2>&1     || die "No display available and Xvfb is not installed. Install it with: sudo apt install xvfb"
+  log "No display found; starting Xvfb on ${XVFB_DISPLAY}"
+  Xvfb "${XVFB_DISPLAY}" -screen 0 1280x1024x24 +extension GLX +extension RENDER -noreset     >"/tmp/xvfb${XVFB_DISPLAY}.log" 2>&1 &
+  sleep 3
+  display_up "${XVFB_DISPLAY}" || die "Failed to start Xvfb on ${XVFB_DISPLAY}"
+  export DISPLAY="${XVFB_DISPLAY}"
+  ROBCO_VIRTUAL_DISPLAY=1
+  log "Started Xvfb on ${DISPLAY}"
+}
+
+# On a virtual framebuffer nobody can see RViz, and it costs CPU that the software
+# renderer needs for the camera sensors, so default it off there. Override with
+# LAUNCH_RVIZ=true|false.
+rviz_arg() {
+  # stdout of this function is consumed by command substitution, so keep the log off it
+  ensure_display >&2
+  local want="${LAUNCH_RVIZ:-auto}"
+  if [[ "${want}" == "auto" ]]; then
+    if [[ "${ROBCO_VIRTUAL_DISPLAY:-0}" == "1" ]]; then want="false"; else want="true"; fi
+  fi
+  printf launch_rviz:=%s "${want}"
+}
+
 run_ros_cmd() {
   local cmd="$1"
-  bash -lc "source /opt/ros/noetic/setup.bash && source ${WORKSPACE_ROOT}/devel/setup.bash && ${cmd}"
+  ensure_display
+  DISPLAY="${DISPLAY}" bash -lc "source /opt/ros/noetic/setup.bash && source ${WORKSPACE_ROOT}/devel/setup.bash && ${cmd}"
 }
 
 subcommand="${1:-}"
@@ -43,13 +91,13 @@ case "${subcommand}" in
   mapping)
     need_devel
     log "Launching neo_workshop mapping"
-    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_mapping.launch"
+    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_mapping.launch $(rviz_arg)"
     ;;
   frontier-mapping)
     need_devel
     need_ros_pkg "explore_lite" "Install it with: sudo apt update && sudo apt install ros-noetic-explore-lite"
     log "Launching neo_workshop frontier exploration mapping"
-    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_frontier_mapping.launch"
+    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_frontier_mapping.launch $(rviz_arg)"
     ;;
   automap)
     need_devel
@@ -67,7 +115,7 @@ case "${subcommand}" in
     [[ -f "${MAP_YAML}" ]] || die "Missing map yaml: ${MAP_YAML}"
     [[ -f "${MAP_PGM}" ]] || die "Missing map pgm: ${MAP_PGM}"
     log "Launching neo_workshop navigation with saved map"
-    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_navigation.launch"
+    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_navigation.launch $(rviz_arg)"
     ;;
   demo)
     need_devel

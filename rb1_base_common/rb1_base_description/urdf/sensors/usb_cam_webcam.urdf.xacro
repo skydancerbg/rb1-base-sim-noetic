@@ -8,15 +8,22 @@
     </joint>
 
     <link name="${prefix}_mast_link">
+      <!-- Mast modelled as a real 40 x 2 mm aluminium tube (outer diam. 40 mm, 2 mm wall,
+           0.96 m long) because the mount mirrors a planned physical build:
+             cross-section = pi*(0.020^2 - 0.018^2) = 2.388e-4 m^2
+             linear mass   = 2.388e-4 * 2700 kg/m^3 = 0.645 kg/m
+             mast mass     = 0.645 * 0.96          = 0.62 kg
+           Inertia uses the thick-walled tube macro, not the solid-cylinder approximation,
+           which would understate a hollow tube. -->
       <inertial>
-        <mass value="0.35"/>
+        <mass value="0.62"/>
         <origin xyz="0 0 0" rpy="0 0 0"/>
-        <xacro:solid_cylinder_inertia m="0.35" r="0.01" h="0.96"/>
+        <xacro:thick_walled_cylinder_inertia m="0.62" r1="0.018" r2="0.020" h="0.96"/>
       </inertial>
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <cylinder radius="0.01" length="0.96"/>
+          <cylinder radius="0.020" length="0.96"/>
         </geometry>
         <material name="usb_cam_mast_aluminum">
           <color rgba="0.78 0.80 0.82 1.0"/>
@@ -25,7 +32,7 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <cylinder radius="0.012" length="0.96"/>
+          <cylinder radius="0.022" length="0.96"/>
         </geometry>
       </collision>
     </link>
