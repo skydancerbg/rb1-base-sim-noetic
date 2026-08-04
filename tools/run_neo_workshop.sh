@@ -74,10 +74,37 @@ rviz_arg() {
   printf launch_rviz:=%s "${want}"
 }
 
+# ROS 1 nodes advertise themselves to the master by ROS_IP; without it they fall back to the
+# hostname, and a hostname is only as good as the resolution on the machine reading it.
+#
+# That went wrong badly here. This VM and the ROS1<->ROS2 bridge VM were clones and BOTH reported
+# the hostname `ros1ros2bridge`, so the bridge resolved our nodes' advertised addresses to its own
+# 127.0.1.1 and refused every connection back to us. Its dynamic bridge then failed its odom
+# health check and restarted forever — thousands of times, for weeks, with no telemetry ever
+# reaching a browser. (This VM was renamed `rb1sim-phd` on 30.07.2026, so the collision itself is
+# gone; setting ROS_IP explicitly is what makes it stay gone.)
+#
+# ~/.bashrc does export ROS_IP, which is why the problem is invisible in an interactive session.
+# But Ubuntu's .bashrc returns early when not interactive, so a `bash -lc` launch — or anything
+# started from a script or by systemd — never reaches that line. Setting it here is what makes it
+# dependable.
+ensure_ros_ip() {
+  if [[ -n "${ROS_IP:-}" ]]; then
+    log "Using ROS_IP=${ROS_IP} from the environment"
+    return
+  fi
+  local addr
+  addr="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i == "src") print $(i+1)}')"
+  [[ -n "${addr}" ]] || die "cannot determine this host's address for ROS_IP; set ROS_IP manually"
+  export ROS_IP="${addr}"
+  log "ROS_IP=${ROS_IP} (derived from the default route)"
+}
+
 run_ros_cmd() {
   local cmd="$1"
   ensure_display
-  DISPLAY="${DISPLAY}" bash -lc "source /opt/ros/noetic/setup.bash && source ${WORKSPACE_ROOT}/devel/setup.bash && ${cmd}"
+  ensure_ros_ip
+  DISPLAY="${DISPLAY}" ROS_IP="${ROS_IP}" bash -lc "export ROS_IP=${ROS_IP}; source /opt/ros/noetic/setup.bash && source ${WORKSPACE_ROOT}/devel/setup.bash && ${cmd}"
 }
 
 subcommand="${1:-}"
