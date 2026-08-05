@@ -74,6 +74,30 @@ rviz_arg() {
   printf launch_rviz:=%s "${want}"
 }
 
+# Same reasoning for the Gazebo GUI, and it costs far more than RViz. On a virtual
+# framebuffer gzclient renders the whole 3D scene in software for nobody to look at:
+# measured 05.08.2026 at 412% CPU, load average 19.4 on 12 cores, starving gzserver and
+# the camera encoder. Killing it changed nothing about the sensors (camera 15.0 Hz, laser
+# 33.3 Hz) and the simulation still held real time (RTF 1.000).
+#
+# Camera sensors need the *render context* Xvfb provides (P0.6), not the GUI.
+#
+# To actually SEE the GUI -- for authoring the world, e.g. adding inspection objects at
+# plan step P5.6 -- two things are needed, because this host is headless:
+#   LAUNCH_GUI=true ./tools/run_neo_workshop.sh navigation
+#   sudo apt install x11vnc && x11vnc -display :99 -localhost -nopw     # then tunnel :5900
+# Turn it off again before any measurement: an invisible viewer taking a third of the
+# machine is a confound for every timing result.
+gui_arg() {
+  # stdout is consumed by command substitution, so keep the log off it
+  ensure_display >&2
+  local want="${LAUNCH_GUI:-auto}"
+  if [[ "${want}" == "auto" ]]; then
+    if [[ "${ROBCO_VIRTUAL_DISPLAY:-0}" == "1" ]]; then want="false"; else want="true"; fi
+  fi
+  printf gui:=%s "${want}"
+}
+
 # ROS 1 nodes advertise themselves to the master by ROS_IP; without it they fall back to the
 # hostname, and a hostname is only as good as the resolution on the machine reading it.
 #
@@ -118,13 +142,13 @@ case "${subcommand}" in
   mapping)
     need_devel
     log "Launching neo_workshop mapping"
-    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_mapping.launch $(rviz_arg)"
+    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_mapping.launch $(rviz_arg) $(gui_arg)"
     ;;
   frontier-mapping)
     need_devel
     need_ros_pkg "explore_lite" "Install it with: sudo apt update && sudo apt install ros-noetic-explore-lite"
     log "Launching neo_workshop frontier exploration mapping"
-    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_frontier_mapping.launch $(rviz_arg)"
+    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_frontier_mapping.launch $(rviz_arg) $(gui_arg)"
     ;;
   automap)
     need_devel
@@ -142,7 +166,7 @@ case "${subcommand}" in
     [[ -f "${MAP_YAML}" ]] || die "Missing map yaml: ${MAP_YAML}"
     [[ -f "${MAP_PGM}" ]] || die "Missing map pgm: ${MAP_PGM}"
     log "Launching neo_workshop navigation with saved map"
-    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_navigation.launch $(rviz_arg)"
+    run_ros_cmd "cd ${WORKSPACE_ROOT} && roslaunch rb1_base_gazebo rb1_neo_workshop_navigation.launch $(rviz_arg) $(gui_arg)"
     ;;
   demo)
     need_devel

@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="launch_rviz" default="true"/>
+  <arg name="gui" default="true"/>
   <arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_neo_workshop_frontier_mapping.rviz"/>
   <arg name="planner_frequency" default="0.33"/>
   <arg name="progress_timeout" default="8.0"/>
@@ -18,6 +19,7 @@
 
   <include file="$(find rb1_base_gazebo)/launch/rb1_base_gazebo.launch">
     <arg name="launch_rviz" value="$(arg launch_rviz)"/>
+    <arg name="gui" value="$(arg gui)"/>
     <arg name="rviz_config" value="$(arg rviz_config)"/>
     <arg name="launch_robot_a" value="true"/>
     <arg name="launch_robot_b" value="false"/>

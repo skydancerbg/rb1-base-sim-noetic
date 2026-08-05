@@ -2,6 +2,12 @@
 <launch>
 
 	<!-- arg to config the launch file-->
+	<!-- The Gazebo GUI. Defaults to true so an interactive workstation is unaffected; the
+	     launcher passes false on a headless host, where gzclient renders a scene nobody can
+	     see and costs about four cores of software rendering (measured 05.08.2026: 412% CPU,
+	     load 19.4 on 12 cores). Camera sensors do not need it; what they need is the render context
+	     Xvfb provides (P0.6). -->
+	<arg name="gui" default="true"/>
 	<arg name="launch_rviz" default="true"/>
 	<arg name="rviz_config" default="$(find rb1_base_gazebo)/rviz/rb1_base.rviz"/>
 	<arg name="launch_robot_a" default="true"/>
@@ -114,6 +120,7 @@
 		<arg name="paused" value="false"/>
 		<arg name="use_sim_time" value="true"/>
 		<arg name="headless" value="false"/>
+		<arg name="gui" value="$(arg gui)"/>
 	</include>
 
 	<!-- launch rviz -->
