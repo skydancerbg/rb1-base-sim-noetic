@@ -33,4 +33,5 @@ install(PROGRAMS
         scripts/manual_speed_selector.py
         scripts/neo_workshop_auto_map.py
         scripts/neo_workshop_frontier_goal_guard.py
+        scripts/sim_battery_model.py
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

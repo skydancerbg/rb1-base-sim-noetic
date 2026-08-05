@@ -17,6 +17,7 @@
 	<arg name="launch_move_base" default="false"/>
 	<arg name="launch_pad" default="false"/>
 	<arg name="use_ros_planar_move_plugin" default="true"/>
+	<arg name="launch_battery_model" default="true"/>
 	<arg name="use_gpu_for_simulation" default="$(optenv ROBOT_SIM_GPU false)"/>
 	<arg name="fake_elevator_physics" default="$(optenv ROBOT_SIM_FAKE_ELEVATOR false)"/>
 
@@ -79,6 +80,23 @@
 			<arg name="prefix" value="$(arg prefix)"/>
 			<arg name="global_frame" value="$(arg global_frame)"/>
 		</include>
+
+		<!-- Battery: a declared MODEL, not a measurement (owner decision, 05.08.2026).
+		     This simulation publishes no battery topic, which is why P4.2's auto-dock had no signal
+		     to work against. The model lives here, in the robot, so that everything downstream reads
+		     it the same way it reads the laser or the camera - nothing invents a value later.
+		     Discharge follows the commanded velocity of the controller plus a fixed idle draw, and
+		     `time_scale` compresses modelled time so a cycle fits inside an experiment. It publishes
+		     its own description on `battery_source`, and it can be driven to any level through
+		     `sim_battery_model/set_level` for fault injection.
+		     No number it produces is a measurement of a physical battery; endurance is never claimed
+		     from it. See scripts/sim_battery_model.py. -->
+		<node if="$(arg launch_battery_model)" name="sim_battery_model" pkg="rb1_base_gazebo"
+		      type="sim_battery_model.py" respawn="false" output="screen">
+			<param name="cmd_vel_topic" value="robotnik_base_control/cmd_vel"/>
+			<param name="rate_hz" value="1.0"/>
+			<param name="time_scale" value="8.0"/>
+		</node>
 
 		<!-- gmapping -->
 		<include if="$(arg launch_gmapping)" file="$(find rb1_base_localization)/launch/gmapping.launch">
