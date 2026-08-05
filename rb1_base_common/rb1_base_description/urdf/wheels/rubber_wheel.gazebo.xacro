@@ -10,6 +10,7 @@
 			<fdir1 value="1 0 0"/>
 			<material>Gazebo/Yellow</material>
 			<turnGravityOff>false</turnGravityOff>
+			<minDepth>0.001</minDepth>
 			<!--kp>500000.0</kp>
 			<kd>10.0</kd>
 			<mu1>10</mu1>

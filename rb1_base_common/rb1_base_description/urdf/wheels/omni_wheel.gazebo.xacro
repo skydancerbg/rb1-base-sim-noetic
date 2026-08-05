@@ -9,6 +9,7 @@
 			<kd value="1.0" />
 			<fdir1 value="1 0 0"/>
 			<turnGravityOff>false</turnGravityOff>
+			<minDepth>0.001</minDepth>
 		</gazebo>
 	</xacro:macro>
 
