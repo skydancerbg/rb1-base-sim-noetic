@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  A SLAM session on the already-running simulation (plan step P2.5).
+
+  Deliberately *not* a whole-world relaunch. The repository's `mapping` subcommand starts the
+  simulation in mapping mode, which means Gazebo reloads 204 models and the robot returns to its
+  spawn pose - a minute of downtime and a lost position every time an operator toggles mapping.
+  A real facility robot does not restart the world to build a map, so neither does this: the map
+  manager stops AMCL and the map server, starts what is below, and puts localisation back on stop.
+
+  The arguments mirror `rb1_base_one_robot.launch` exactly, because gmapping has to write into the
+  same frames the rest of the stack reads. `map_manager.py` is what launches this; running it by
+  hand while AMCL is up gives two publishers of robot_map -> robot_odom and a fight over the
+  transform.
+-->
+<launch>
+  <arg name="id_robot" default="robot"/>
+  <arg name="prefix" value="$(arg id_robot)_"/>
+  <arg name="resolution" default="0.02"/>
+
+  <group ns="$(arg id_robot)">
+    <include file="$(find rb1_base_localization)/launch/gmapping.launch">
+      <arg name="id_robot" value="$(arg id_robot)"/>
+      <arg name="prefix" value="$(arg prefix)"/>
+      <arg name="resolution" value="$(arg resolution)"/>
+    </include>
+  </group>
+</launch>

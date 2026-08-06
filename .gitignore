@@ -30,3 +30,7 @@ __pycache__/
 
 # Remote and local configs
 .rosinstall
+# One-generation map backups written by tools/save_neo_workshop_map.sh (P2.5). They are
+# operational artifacts - 24 MB each - and the tracked map is the one that belongs in git.
+*.previous.yaml
+*.previous.pgm
