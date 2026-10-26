@@ -1,0 +1,25 @@
+# Re-sends the last AMCL pose once a second so a console opened while the robot is stationary
+# shows the marker at once (see tools/amcl_pose_keepalive.py for why, and what it does not do).
+#
+# Install: sudo cp tools/systemd/amcl-pose-keepalive.service /etc/systemd/system/ &&
+#          sudo systemctl daemon-reload && sudo systemctl enable --now amcl-pose-keepalive
+#
+# Restart=always for the same reason as web-video-server: the simulation is started by hand, so
+# at boot there is no ROS master yet and the node simply retries until there is one. ROS_IP is set
+# here because .bashrc never reaches a systemd unit.
+
+[Unit]
+Description=Keep the last AMCL pose available to late subscribers (RobcoGADGET)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=swu
+Environment=ROS_IP=10.25.25.123
+Environment=ROS_MASTER_URI=http://10.25.25.123:11311
+ExecStart=/bin/bash -c "source /opt/ros/noetic/setup.bash && exec python3 /home/swu/catkin_ws/src/tools/amcl_pose_keepalive.py"
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
