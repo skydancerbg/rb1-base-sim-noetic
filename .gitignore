@@ -34,3 +34,5 @@ __pycache__/
 # operational artifacts - 24 MB each - and the tracked map is the one that belongs in git.
 *.previous.yaml
 *.previous.pgm
+# LibreOffice lock files
+.~lock.*#
