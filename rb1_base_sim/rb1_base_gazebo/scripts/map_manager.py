@@ -49,8 +49,8 @@ WORKSPACE = pathlib.Path(os.environ.get("WORKSPACE_ROOT", str(pathlib.Path.home(
 SAVE_SCRIPT = WORKSPACE / "src/tools/save_neo_workshop_map.sh"
 LOG_DIR = pathlib.Path(os.environ.get("MAP_MANAGER_LOG_DIR", "/tmp"))
 
-ROS_MASTER_URI = os.environ.get("ROS_MASTER_URI", "http://10.25.25.115:11311")
-ROS_IP = os.environ.get("ROS_IP", "10.25.25.115")
+ROS_MASTER_URI = os.environ.get("ROS_MASTER_URI", "http://10.25.25.123:11311")
+ROS_IP = os.environ.get("ROS_IP", "10.25.25.123")
 
 #: How long to wait for a service to appear or disappear before calling the step failed.
 SERVICE_TIMEOUT = float(os.environ.get("MAP_MANAGER_SERVICE_TIMEOUT", "45"))
