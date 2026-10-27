@@ -82,6 +82,13 @@ def main():
     rospy.loginfo("re-sending the last %s once per %.1f s while this run of %s is alive",
                   TOPIC, PERIOD_S, AMCL_NODE)
 
+    try:
+        run(master, own_name, state, publisher)
+    except rospy.ROSInterruptException:
+        pass  # stopped by systemd: that is the normal way out, not a failure
+
+
+def run(master, own_name, state, publisher):
     while not rospy.is_shutdown():
         pid = amcl_pid(master, own_name)
         if pid is None:
