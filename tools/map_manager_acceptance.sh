@@ -24,16 +24,23 @@
 #   `rosnode list` afterwards, that it gives a fresh pose, and that the override is gone from
 #   `systemctl show-environment`.
 #
-# Usage:  tools/map_manager_acceptance.sh [--no-strict | --break-start]
+# --restart-manager  starts a session and restarts robco-map-manager while it runs. The restart ends the
+#   unit's whole process group, gmapping included, so the manager must recover on its own: idle, the stale
+#   gmapping registration purged, localisation back with a fresh pose. (A gmapping that survives, e.g. a
+#   kill of the manager alone, is adopted as active; that path is not exercised here.)
+#
+# Usage:  tools/map_manager_acceptance.sh [--no-strict | --break-start | --restart-manager]
 set -u
 
 STRICT=1
 BREAK_START=0
+RESTART_CHECK=0
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1 ;;
     --no-strict) STRICT=0 ;;
     --break-start) BREAK_START=1 ;;
+    --restart-manager) RESTART_CHECK=1 ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -150,6 +157,22 @@ if (( BREAK_START )); then
   sudo systemctl restart robco-map-manager
   sleep 3
   check i "MAPPING_LAUNCH is gone from systemctl show-environment" "$(systemctl show-environment | grep -q '^MAPPING_LAUNCH=' && echo false || echo true)"
+  say "$([[ $FAILS -eq 0 ]] && echo 'RESULT: all assertions passed' || echo "RESULT: ${FAILS} assertion(s) failed")"
+  exit $(( FAILS > 0 ))
+fi
+
+if (( RESTART_CHECK )); then
+  curl -s -m 40 -o /dev/null -X POST "${MANAGER}/session/start"
+  sudo systemctl restart robco-map-manager
+  sleep 5
+  # Restarting the unit ends its process group, gmapping included. The honest outcomes are therefore:
+  # the manager has recovered (idle, localisation back, a fresh pose), never a ghost "mapping" session.
+  for _ in $(seq 1 30); do [[ "$(manager_active)" == False ]] && break; sleep 2; done
+  check j "after a restart the manager does not report a ghost session (gmapping died with the unit)" "$([[ "$(manager_active)" == False ]] && echo true || echo false)"
+  AFTER="$(python3 "${TOOLS}/map_pose_now.py" --amcl-after --timeout 20 2>/dev/null || true)"
+  check k "AMCL is localising again after the recovery" "$([[ -n "$AFTER" ]] && rosnode list 2>/dev/null | grep -qx /robot/amcl && echo true || echo false)"
+  check l "no stale gmapping registration is left" "$(rosnode list 2>/dev/null | grep -qx /robot/slam_gmapping && echo false || echo true)"
+  say "$(curl -s -m 5 "${MANAGER}/session" | python3 -c "import json,sys; print(json.load(sys.stdin)['state']['detail'])" 2>/dev/null)"
   say "$([[ $FAILS -eq 0 ]] && echo 'RESULT: all assertions passed' || echo "RESULT: ${FAILS} assertion(s) failed")"
   exit $(( FAILS > 0 ))
 fi
