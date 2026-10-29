@@ -9,7 +9,7 @@
 
   map_pose_now.py --amcl-after [--timeout 15]
       Ask AMCL for a no-motion update, then print the first /robot/amcl_pose whose stamp is later than
-      the moment of the request. A replayed pose (the keepalive, a latched sample) carries an older stamp
+      the pose held when it asked. A replayed pose (the keepalive, a latched sample) carries an older stamp
       and is not accepted: this answers "has the localiser really produced a pose since I asked".
 """
 import argparse
@@ -44,6 +44,13 @@ def amcl_pose_after_update(timeout):
     from geometry_msgs.msg import PoseWithCovarianceStamped
     from std_srvs.srv import Empty
 
+    # "Newer" means a stamp later than the pose already held when we ask, the same rule the backend
+    # applies to a point capture. Not "later than the moment of the request": the first update after
+    # the request uses a laser scan that was stamped a few tens of milliseconds BEFORE it.
+    try:
+        held = rospy.wait_for_message(POSE_TOPIC, PoseWithCovarianceStamped, timeout=2.0).header.stamp
+    except rospy.ROSException:
+        held = None  # nothing held: any pose that arrives after the request is new
     asked_at = rospy.Time.now()
     rospy.wait_for_service(UPDATE_SERVICE, timeout=5.0)
     rospy.ServiceProxy(UPDATE_SERVICE, Empty)()
@@ -53,10 +60,11 @@ def amcl_pose_after_update(timeout):
             message = rospy.wait_for_message(POSE_TOPIC, PoseWithCovarianceStamped, timeout=1.0)
         except rospy.ROSException:
             continue
-        if message.header.stamp > asked_at:
+        stamp = message.header.stamp
+        if (stamp > held) if held is not None else (stamp >= asked_at):
             p = message.pose.pose
             return {"x": p.position.x, "y": p.position.y, "yaw": yaw_of(p.orientation),
-                    "stamp": message.header.stamp.to_sec()}
+                    "stamp": stamp.to_sec()}
     raise RuntimeError("no %s newer than the update request arrived within %.0f s" % (POSE_TOPIC, timeout))
 
 

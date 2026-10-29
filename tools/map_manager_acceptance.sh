@@ -12,26 +12,25 @@
 #   b  no move_base goal is ACTIVE (status 1) after the start
 #   c  after the stop, a /robot/amcl_pose NEWER than a forced update arrives within 15 s
 #   d  after the stop exactly one localiser publishes the map->odom transform: AMCL is up and gmapping is gone
-#   e  (--strict) the AMCL pose after the stop is within 0.2 m of the pose read just before the stop
+#   e  the AMCL pose after the stop is within 0.2 m of the pose read just before the stop (--no-strict skips)
 #
-# Known failures on the code as of 2.1, listed in XFAIL_CHECKS so they print XFAIL and do not fail the
-# run; step 2.2 fixes them and removes the entries:
-#   c  -- the manager reports "restored" when the map server is back, not when AMCL has produced a pose;
-#         AMCL is silent until it is moved or asked and was not seeded (D-21, F-009).
-#   e  -- the manager restores AMCL at (0,0,0), not at the SLAM pose (F-009).
+# Expected failures are listed in XFAIL_CHECKS (environment variable; none since step 2.2, which made the
+# manager seed AMCL from the SLAM pose and prove it is localising - F-009). A listed check prints XFAIL
+# instead of FAIL.
 #
-# Usage:  tools/map_manager_acceptance.sh [--strict]
+# Usage:  tools/map_manager_acceptance.sh [--no-strict]
 set -u
 
-STRICT=0
+STRICT=1
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1 ;;
+    --no-strict) STRICT=0 ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
 
-XFAIL_CHECKS="${XFAIL_CHECKS-c e}"
+XFAIL_CHECKS="${XFAIL_CHECKS-}"
 WORKSPACE_ROOT="${WORKSPACE_ROOT:-${HOME}/catkin_ws}"
 MANAGER="${MAP_MANAGER_URL:-http://127.0.0.1:8090}"
 BACKUP_DIR="${BACKUP_DIR:-${HOME}/backups/2.1/map}"
