@@ -198,6 +198,32 @@ def read_pose() -> dict | None:
         return None
 
 
+LAST_POSE_FILE = LOG_DIR / "last_pose.json"
+
+
+def remember_pose(pose: dict | None) -> None:
+    """Keep the pose a session started in, so a restart of THIS service can still seed AMCL near it.
+
+    A restart ends the service's whole process group, gmapping included, and with it the only source of
+    the robot's pose (the SLAM transform). Without this the recovery would have to start AMCL at the
+    origin of the map.
+    """
+    if pose is None:
+        return
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        LAST_POSE_FILE.write_text(json.dumps(pose), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def recall_pose() -> dict | None:
+    try:
+        return json.loads(LAST_POSE_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 def seed_args(pose: dict | None) -> tuple[str, ...]:
     if pose is None:
         return ()
@@ -277,6 +303,7 @@ def start_session() -> tuple[int, dict]:
         return 500, {"error": error, "state": public_state()}
 
     pose = read_pose()  # before AMCL goes: it is the pose to come back to if the start fails
+    remember_pose(pose)
     _state["phase"] = "stopping localisation"
     kill_nodes(*LOCALISATION_NODES)
     stop_group(_procs["restore"])  # the launch that owned them, if it was ours
@@ -391,16 +418,31 @@ class Handler(BaseHTTPRequestHandler):
         print(f"{now()} {self.address_string()} {fmt % args}", flush=True)
 
 
-def adopt_running_session() -> None:
-    """If gmapping is already running when this service starts, say so instead of claiming idle.
+def gmapping_answers() -> bool:
+    """True only if the registered gmapping node replies. (`rosnode ping` exits 0 either way.)"""
+    result = ros(f"rosnode ping -c 1 {shlex.quote(GMAPPING_NODE)}", timeout=20)
+    return "xmlrpc reply from" in result.stdout
 
-    The state lives in this process. After a restart (a deploy, a crash, `systemctl restart`) it used
-    to read "no session has run" while gmapping was still building a map and AMCL was still displaced:
-    the console would offer to START a session over a running one, and no stop would ever be offered
-    for the one that matters. What is known is only that it is running, not since when.
+
+def adopt_running_session() -> None:
+    """Make the state at start-up match what is actually running, instead of claiming idle.
+
+    The state lives in this process. After a restart it used to read "no session has run" while a
+    session was open. Two cases, and they must not be confused:
+
+    * gmapping is registered AND answers: a session really is running (this service was killed alone).
+      Adopt it. What is known is only that it is running, not since when.
+    * gmapping is registered but silent: restarting this unit ends its whole process group, and the
+      gmapping launch was in it. The master still lists the dead node, AMCL and the map server were
+      displaced when the session began, so the robot is unlocalised and nothing will ever finish the
+      session. Calling that "mapping" would send a stop to a map saver waiting for a map that never
+      comes. Purge the stale registration and put localisation back, seeded at the pose the session
+      started in (the robot may have been driven since: the detail says so).
     """
     result = ros("rosnode list", timeout=30)
-    if result.returncode == 0 and GMAPPING_NODE in result.stdout.split():
+    if result.returncode != 0 or GMAPPING_NODE not in result.stdout.split():
+        return
+    if gmapping_answers():
         _state.update(
             active=True,
             phase="mapping",
@@ -409,6 +451,18 @@ def adopt_running_session() -> None:
             detail="a gmapping session was found running when this service started; "
                    "its start time is unknown",
         )
+        return
+    ros("echo y | rosnode cleanup", timeout=60)
+    pose = recall_pose()
+    restored, what = restore_localisation(pose)
+    seeded = " (seeded at the pose that session started in; the robot may have moved since)" if pose else ""
+    _state.update(
+        active=False,
+        phase="idle" if restored else "localisation did not come back",
+        stopped_at=now(),
+        detail=("a mapping session was open when this service restarted, and its gmapping died with "
+                f"it; the map was not saved. {what}{seeded}"),
+    )
 
 
 def main() -> int:
