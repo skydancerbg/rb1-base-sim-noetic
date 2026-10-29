@@ -350,6 +350,9 @@ def stop_session() -> tuple[int, dict]:
         return 500, {
             "error": "map_saver failed; the session is still running so nothing was lost",
             "detail": (saved.stderr or saved.stdout)[-400:],
+            # The caller has to know the session is STILL OPEN (active true) to keep its map
+            # refresher running and to tell the operator to try again (plan step 2.10).
+            "state": public_state(),
         }
 
     pose = read_pose()  # gmapping's estimate, while gmapping still publishes it
