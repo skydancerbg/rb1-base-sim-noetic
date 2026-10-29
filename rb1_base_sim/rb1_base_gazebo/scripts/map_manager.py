@@ -391,7 +391,28 @@ class Handler(BaseHTTPRequestHandler):
         print(f"{now()} {self.address_string()} {fmt % args}", flush=True)
 
 
+def adopt_running_session() -> None:
+    """If gmapping is already running when this service starts, say so instead of claiming idle.
+
+    The state lives in this process. After a restart (a deploy, a crash, `systemctl restart`) it used
+    to read "no session has run" while gmapping was still building a map and AMCL was still displaced:
+    the console would offer to START a session over a running one, and no stop would ever be offered
+    for the one that matters. What is known is only that it is running, not since when.
+    """
+    result = ros("rosnode list", timeout=30)
+    if result.returncode == 0 and GMAPPING_NODE in result.stdout.split():
+        _state.update(
+            active=True,
+            phase="mapping",
+            started_at=None,
+            stopped_at=None,
+            detail="a gmapping session was found running when this service started; "
+                   "its start time is unknown",
+        )
+
+
 def main() -> int:
+    adopt_running_session()
     print(f"{now()} map manager listening on {HOST}:{PORT}, master {ROS_MASTER_URI}", flush=True)
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
     return 0
