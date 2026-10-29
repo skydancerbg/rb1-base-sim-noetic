@@ -18,14 +18,22 @@
 # manager seed AMCL from the SLAM pose and prove it is localising - F-009). A listed check prints XFAIL
 # instead of FAIL.
 #
-# Usage:  tools/map_manager_acceptance.sh [--no-strict]
+# --break-start  does not run a session. It points the manager at a launch file that does not exist
+#   (MAPPING_LAUNCH, through `systemctl set-environment` and a restart of robco-map-manager; undone on
+#   exit) and asserts that the start answers 500 with a phase beginning "start failed", that AMCL is in
+#   `rosnode list` afterwards, that it gives a fresh pose, and that the override is gone from
+#   `systemctl show-environment`.
+#
+# Usage:  tools/map_manager_acceptance.sh [--no-strict | --break-start]
 set -u
 
 STRICT=1
+BREAK_START=0
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1 ;;
     --no-strict) STRICT=0 ;;
+    --break-start) BREAK_START=1 ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -96,6 +104,11 @@ relaunch_localisation() {
 
 cleanup() {
   trap - EXIT
+  if systemctl show-environment | grep -q '^MAPPING_LAUNCH='; then
+    sudo systemctl unset-environment MAPPING_LAUNCH
+    sudo systemctl restart robco-map-manager
+    sleep 3
+  fi
   say "cleanup: closing a session left open, putting the map back, restoring localisation"
   if [[ "$(manager_active)" == True ]]; then curl -s -m 90 -X POST "${MANAGER}/session/stop" >/dev/null; fi
   rostopic pub -1 /robot/web_teleop/cmd_vel geometry_msgs/Twist '{}' >/dev/null 2>&1
@@ -121,6 +134,25 @@ trap cleanup EXIT
 [[ "$(manager_active)" == False ]] || { say "a mapping session is already active; refusing to start"; exit 2; }
 SEED="$(python3 "${TOOLS}/map_pose_now.py" 2>/dev/null || true)"
 say "pose before: ${SEED:-unavailable}"
+
+if (( BREAK_START )); then
+  sudo systemctl set-environment MAPPING_LAUNCH=does_not_exist.launch
+  sudo systemctl restart robco-map-manager
+  sleep 4
+  read -r code secs < <(curl -s -m 100 -o /tmp/acc_break.json -w '%{http_code} %{time_total}\n' -X POST "${MANAGER}/session/start")
+  phase="$(python3 -c "import json; print(json.load(open('/tmp/acc_break.json'))['state']['phase'])" 2>/dev/null)"
+  say "broken start -> ${code} in ${secs}s, phase: ${phase}"
+  check f "a start whose launch file is missing answers 500" "$([[ "$code" == 500 ]] && echo true || echo false)"
+  check g "its phase says the start failed" "$([[ "$phase" == "start failed"* ]] && echo true || echo false)"
+  AFTER="$(python3 "${TOOLS}/map_pose_now.py" --amcl-after --timeout 20 2>/dev/null || true)"
+  check h "AMCL is in rosnode list and gives a fresh pose afterwards" "$([[ -n "$AFTER" ]] && rosnode list 2>/dev/null | grep -qx /robot/amcl && echo true || echo false)"
+  sudo systemctl unset-environment MAPPING_LAUNCH
+  sudo systemctl restart robco-map-manager
+  sleep 3
+  check i "MAPPING_LAUNCH is gone from systemctl show-environment" "$(systemctl show-environment | grep -q '^MAPPING_LAUNCH=' && echo false || echo true)"
+  say "$([[ $FAILS -eq 0 ]] && echo 'RESULT: all assertions passed' || echo "RESULT: ${FAILS} assertion(s) failed")"
+  exit $(( FAILS > 0 ))
+fi
 
 # --- a: start -------------------------------------------------------------------------------------
 read -r code secs < <(curl -s -m 40 -o /tmp/acc_start.json -w '%{http_code} %{time_total}\n' -X POST "${MANAGER}/session/start")

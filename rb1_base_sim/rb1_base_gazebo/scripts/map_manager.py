@@ -21,8 +21,10 @@ deployment: a firewall that admits the web VM alone. Authentication, the role ch
 record live in the backend, which is the only client. Anything else with a route to this port can
 start a SLAM session, which is why the port must never be opened wider.
 
-**Operations are synchronous, and one at a time.** Starting takes ~20 s and stopping ~40 s;
-returning early with "accepted" would mean the console reporting a state nobody had verified. A
+**Operations are synchronous, and one at a time.** Starting takes about 7-9 s and stopping 8-25 s
+(measured by tools/map_manager_acceptance.sh on 27-29 Oct 2026; most of a stop is the localiser coming
+back and proving it has a pose); returning early with "accepted" would mean the console reporting a
+state nobody had verified. A
 second request while one is running gets 409 rather than a race between two roslaunches.
 
 **On failure it tries to leave the robot navigable.** If gmapping does not come up, the session is
@@ -36,6 +38,8 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import shlex
+import signal
 import subprocess
 import threading
 import time
@@ -48,6 +52,8 @@ PORT = int(os.environ.get("MAP_MANAGER_PORT", "8090"))
 WORKSPACE = pathlib.Path(os.environ.get("WORKSPACE_ROOT", str(pathlib.Path.home() / "catkin_ws")))
 SAVE_SCRIPT = WORKSPACE / "src/tools/save_neo_workshop_map.sh"
 POSE_TOOL = WORKSPACE / "src/tools/map_pose_now.py"
+#: Overridable so the acceptance script can inject a failed start (--break-start); nothing else sets it.
+MAPPING_LAUNCH = os.environ.get("MAPPING_LAUNCH", "mapping_session.launch")
 LOG_DIR = pathlib.Path(os.environ.get("MAP_MANAGER_LOG_DIR", "/tmp"))
 
 ROS_MASTER_URI = os.environ.get("ROS_MASTER_URI", "http://10.25.25.123:11311")
@@ -67,6 +73,12 @@ DYNAMIC_MAP_SERVICE = "/robot/dynamic_map"
 #: took longer than one 10 s attempt on the acceptance run.
 POSE_ATTEMPT_SECONDS = 10
 POSE_ATTEMPTS = 3
+
+#: The roslaunch process groups THIS service started. A handle is what lets a stop end gmapping even
+#: when `rosnode kill` does not (a hung node keeps its roslaunch alive), and what makes sure a restore
+#: replaces the previous restore instead of piling up beside it. The simulation's own navigation launch
+#: is not ours and is never touched.
+_procs: dict[str, subprocess.Popen | None] = {"mapping": None, "restore": None}
 
 _lock = threading.Lock()
 _state = {
@@ -92,8 +104,8 @@ def ros(command: str, timeout: float = 60.0) -> subprocess.CompletedProcess:
     script = (
         "set +u; "
         "source /opt/ros/noetic/setup.bash >/dev/null 2>&1; "
-        f"source {WORKSPACE}/devel/setup.bash >/dev/null 2>&1; "
-        f"export ROS_MASTER_URI={ROS_MASTER_URI}; export ROS_IP={ROS_IP}; "
+        f"source {shlex.quote(str(WORKSPACE))}/devel/setup.bash >/dev/null 2>&1; "
+        f"export ROS_MASTER_URI={shlex.quote(ROS_MASTER_URI)}; export ROS_IP={shlex.quote(ROS_IP)}; "
         f"{command}"
     )
     return subprocess.run(
@@ -101,19 +113,24 @@ def ros(command: str, timeout: float = 60.0) -> subprocess.CompletedProcess:
     )
 
 
-def launch(launch_file: str, log_name: str, args: tuple[str, ...] = ()) -> None:
-    """Start a roslaunch detached, so it outlives the request that asked for it."""
+def launch(launch_file: str, log_name: str, args: tuple[str, ...] = ()) -> subprocess.Popen:
+    """Start a roslaunch detached, so it outlives the request that asked for it.
+
+    Returns the process, which leads its own session and process group (`start_new_session`), so its
+    pid is its group id and `stop_group` can end the launch and everything it started.
+    """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / log_name
     script = (
         "set +u; "
         "source /opt/ros/noetic/setup.bash >/dev/null 2>&1; "
-        f"source {WORKSPACE}/devel/setup.bash >/dev/null 2>&1; "
-        f"export ROS_MASTER_URI={ROS_MASTER_URI}; export ROS_IP={ROS_IP}; "
-        f"exec roslaunch rb1_base_gazebo {launch_file} {' '.join(args)}"
+        f"source {shlex.quote(str(WORKSPACE))}/devel/setup.bash >/dev/null 2>&1; "
+        f"export ROS_MASTER_URI={shlex.quote(ROS_MASTER_URI)}; export ROS_IP={shlex.quote(ROS_IP)}; "
+        f"exec roslaunch rb1_base_gazebo {shlex.quote(launch_file)} "
+        f"{' '.join(shlex.quote(a) for a in args)}"
     )
     with log_path.open("wb") as log:
-        subprocess.Popen(
+        return subprocess.Popen(
             ["bash", "-c", script],
             stdout=log,
             stderr=subprocess.STDOUT,
@@ -122,17 +139,45 @@ def launch(launch_file: str, log_name: str, args: tuple[str, ...] = ()) -> None:
         )
 
 
+def stop_group(proc: subprocess.Popen | None, grace: float = 10.0) -> None:
+    """End a launch this service started: SIGINT its group, wait, then SIGKILL what is left."""
+    if proc is None or proc.poll() is not None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGINT)
+    except ProcessLookupError:
+        return
+    try:
+        proc.wait(timeout=grace)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+
+
 def service_present(name: str) -> bool:
     result = ros(f"rosservice list 2>/dev/null | grep -qx {name}", timeout=20)
     return result.returncode == 0
 
 
-def wait_for_service(name: str, present: bool, timeout: float = SERVICE_TIMEOUT) -> bool:
-    """Wait until `name` is (or is not) offered. Returns False on timeout."""
+def wait_for_service(name: str, present: bool, timeout: float = SERVICE_TIMEOUT,
+                     launch_proc: subprocess.Popen | None = None) -> bool:
+    """Wait until `name` is (or is not) offered. Returns False on timeout.
+
+    With `launch_proc`, also gives up at once when that launch has exited: a service that its own
+    launch can no longer create is not worth another 45 s of waiting.
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if service_present(name) == present:
             return True
+        if launch_proc is not None and launch_proc.poll() is not None:
+            return service_present(name) == present
         time.sleep(1.0)
     return False
 
@@ -171,8 +216,10 @@ def restore_localisation(pose: dict | None) -> tuple[bool, str]:
     localiser that never speaks is a robot that looks restored and is blind; the old check could not
     tell the two apart (F-009). Returns (restored, what happened) for the caller's `detail`.
     """
-    launch("localization_restore.launch", "localization_restore.log", seed_args(pose))
-    if not wait_for_service(STATIC_MAP_SERVICE, present=True):
+    stop_group(_procs["restore"])  # the previous restore's launch, if it is still around
+    _procs["restore"] = launch("localization_restore.launch", "localization_restore.log",
+                               seed_args(pose))
+    if not wait_for_service(STATIC_MAP_SERVICE, present=True, launch_proc=_procs["restore"]):
         return False, "the map server did not come back - check the sim VM"
     for _ in range(POSE_ATTEMPTS):
         result = ros(f"python3 {POSE_TOOL} --amcl-after --timeout {POSE_ATTEMPT_SECONDS}",
@@ -224,21 +271,34 @@ def start_session() -> tuple[int, dict]:
     if _state["active"]:
         return 409, {"error": "a mapping session is already running", "state": public_state()}
 
+    def failed(phase: str, error: str) -> tuple[int, dict]:
+        """Every way a start can fail ends here: a phase that says which, and the state in the body."""
+        _state.update(active=False, phase=phase, detail=error)
+        return 500, {"error": error, "state": public_state()}
+
     pose = read_pose()  # before AMCL goes: it is the pose to come back to if the start fails
     _state["phase"] = "stopping localisation"
     kill_nodes(*LOCALISATION_NODES)
+    stop_group(_procs["restore"])  # the launch that owned them, if it was ours
     if not wait_for_service(STATIC_MAP_SERVICE, present=False, timeout=20):
-        _state["phase"] = "idle"
-        return 500, {"error": "the map server did not stop; localisation left as it was"}
+        # AMCL has been killed by now, so localisation is NOT as it was: put it back.
+        restored, what = restore_localisation(pose)
+        suffix = "localisation restored" if restored else "localisation NOT restored"
+        return failed(f"start failed: map server did not stop; {suffix}",
+                      f"the map server did not stop; {what}")
 
     _state["phase"] = "starting gmapping"
-    launch("mapping_session.launch", "mapping_session.log")
-    if not wait_for_service(DYNAMIC_MAP_SERVICE, present=True):
+    _procs["mapping"] = launch(MAPPING_LAUNCH, "mapping_session.log")
+    if not wait_for_service(DYNAMIC_MAP_SERVICE, present=True, launch_proc=_procs["mapping"]):
         # Do not leave the robot with neither a map server nor gmapping: it could not plan at all.
         _state["phase"] = "restoring localisation after a failed start"
+        kill_nodes(GMAPPING_NODE)
+        stop_group(_procs["mapping"])
+        _procs["mapping"] = None
         restored, what = restore_localisation(pose)
-        _state["phase"] = "idle" if restored else "localisation did not come back"
-        return 500, {"error": f"gmapping did not start; {what}"}
+        suffix = "localisation restored" if restored else "localisation NOT restored"
+        return failed(f"start failed: gmapping did not start; {suffix}",
+                      f"gmapping did not start; {what}")
 
     _state.update(
         active=True,
@@ -267,7 +327,9 @@ def stop_session() -> tuple[int, dict]:
 
     pose = read_pose()  # gmapping's estimate, while gmapping still publishes it
     _state["phase"] = "stopping gmapping"
-    kill_nodes(GMAPPING_NODE)
+    kill_nodes(GMAPPING_NODE)  # the polite first attempt
+    stop_group(_procs["mapping"])  # and the whole launch, if the node did not take the hint
+    _procs["mapping"] = None
 
     _state["phase"] = "restoring localisation"
     restored, what = restore_localisation(pose)
