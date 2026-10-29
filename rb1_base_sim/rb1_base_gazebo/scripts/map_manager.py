@@ -234,7 +234,7 @@ def seed_args(pose: dict | None) -> tuple[str, ...]:
     )
 
 
-def restore_localisation(pose: dict | None) -> tuple[bool, str]:
+def restore_localisation(pose: dict | None, pose_is: str = "the pose the session ended in") -> tuple[bool, str]:
     """Bring AMCL and the map server back, seeded at `pose`, and prove AMCL is localising.
 
     Restored means two things, not one: the map server answers `static_map`, AND after a forced
@@ -251,7 +251,7 @@ def restore_localisation(pose: dict | None) -> tuple[bool, str]:
         result = ros(f"python3 {POSE_TOOL} --amcl-after --timeout {POSE_ATTEMPT_SECONDS}",
                      timeout=POSE_ATTEMPT_SECONDS + 15)
         if result.returncode == 0:
-            seeded = "at the pose the session ended in" if pose else "WITHOUT a starting pose"
+            seeded = f"at {pose_is}" if pose else "WITHOUT a starting pose"
             return True, f"localisation restored {seeded}"
     return False, (
         "the map server is back but AMCL produced no pose after a forced update; "
@@ -454,14 +454,13 @@ def adopt_running_session() -> None:
         return
     ros("echo y | rosnode cleanup", timeout=60)
     pose = recall_pose()
-    restored, what = restore_localisation(pose)
-    seeded = " (seeded at the pose that session started in; the robot may have moved since)" if pose else ""
+    restored, what = restore_localisation(pose, "the pose that session started in; the robot may have moved since")
     _state.update(
         active=False,
         phase="idle" if restored else "localisation did not come back",
         stopped_at=now(),
         detail=("a mapping session was open when this service restarted, and its gmapping died with "
-                f"it; the map was not saved. {what}{seeded}"),
+                f"it; the map was not saved. {what}"),
     )
 
 
