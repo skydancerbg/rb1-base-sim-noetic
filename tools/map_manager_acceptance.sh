@@ -14,9 +14,11 @@
 #   d  after the stop exactly one localiser publishes the map->odom transform: AMCL is up and gmapping is gone
 #   e  (--strict) the AMCL pose after the stop is within 0.2 m of the pose read just before the stop
 #
-# Known failures on the code as of 2.1, listed in XFAIL so they print XFAIL and do not fail the run;
-# step 2.2 fixes them and removes the entry:
-#   XFAIL_CHECKS="e"   -- the manager restores AMCL at (0,0,0), not at the SLAM pose (F-009).
+# Known failures on the code as of 2.1, listed in XFAIL_CHECKS so they print XFAIL and do not fail the
+# run; step 2.2 fixes them and removes the entries:
+#   c  -- the manager reports "restored" when the map server is back, not when AMCL has produced a pose;
+#         AMCL is silent until it is moved or asked and was not seeded (D-21, F-009).
+#   e  -- the manager restores AMCL at (0,0,0), not at the SLAM pose (F-009).
 #
 # Usage:  tools/map_manager_acceptance.sh [--strict]
 set -u
@@ -29,7 +31,7 @@ for arg in "$@"; do
   esac
 done
 
-XFAIL_CHECKS="${XFAIL_CHECKS-e}"
+XFAIL_CHECKS="${XFAIL_CHECKS-c e}"
 WORKSPACE_ROOT="${WORKSPACE_ROOT:-${HOME}/catkin_ws}"
 MANAGER="${MAP_MANAGER_URL:-http://127.0.0.1:8090}"
 BACKUP_DIR="${BACKUP_DIR:-${HOME}/backups/2.1/map}"
@@ -39,6 +41,7 @@ set +u
 source /opt/ros/noetic/setup.bash
 source "${WORKSPACE_ROOT}/devel/setup.bash"
 set -u
+export LC_ALL=C   # decimal points: curl and awk must agree on "6.9", not "6,9"
 export ROS_MASTER_URI="${ROS_MASTER_URI:-http://10.25.25.123:11311}"
 export ROS_IP="${ROS_IP:-10.25.25.123}"
 
@@ -146,6 +149,12 @@ check a "stop answered 200 within 60 s" "$([[ "$code" == 200 ]] && awk -v s="$se
 AFTER="$(python3 "${TOOLS}/map_pose_now.py" --amcl-after --timeout 15 2>/dev/null || true)"
 say "pose from AMCL after a forced update: ${AFTER:-none}"
 check c "a fresh /robot/amcl_pose (newer than a forced update) arrived within 15 s" "$([[ -n "$AFTER" ]] && echo true || echo false)"
+if [[ -z "$AFTER" ]]; then
+  # Diagnostic only: is it a delay or a silence? Ask again after the localiser has had time to settle.
+  sleep 20
+  LATE="$(python3 "${TOOLS}/map_pose_now.py" --amcl-after --timeout 15 2>/dev/null || true)"
+  say "diagnostic, 20 s later: ${LATE:-still none}"
+fi
 
 # --- d: exactly one localiser ---------------------------------------------------------------------
 nodes="$(rosnode list 2>/dev/null)"
