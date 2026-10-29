@@ -47,6 +47,7 @@ PORT = int(os.environ.get("MAP_MANAGER_PORT", "8090"))
 
 WORKSPACE = pathlib.Path(os.environ.get("WORKSPACE_ROOT", str(pathlib.Path.home() / "catkin_ws")))
 SAVE_SCRIPT = WORKSPACE / "src/tools/save_neo_workshop_map.sh"
+POSE_TOOL = WORKSPACE / "src/tools/map_pose_now.py"
 LOG_DIR = pathlib.Path(os.environ.get("MAP_MANAGER_LOG_DIR", "/tmp"))
 
 ROS_MASTER_URI = os.environ.get("ROS_MASTER_URI", "http://10.25.25.123:11311")
@@ -60,6 +61,12 @@ LOCALISATION_NODES = ("/robot/amcl", "/robot/robot_map_server")
 GMAPPING_NODE = "/robot/slam_gmapping"
 STATIC_MAP_SERVICE = "/robot/static_map"
 DYNAMIC_MAP_SERVICE = "/robot/dynamic_map"
+
+#: How long one attempt waits for a pose newer than the forced update, and how many attempts. The map
+#: server being back does not mean AMCL is: it still has to load a 25 MB map before it can answer, which
+#: took longer than one 10 s attempt on the acceptance run.
+POSE_ATTEMPT_SECONDS = 10
+POSE_ATTEMPTS = 3
 
 _lock = threading.Lock()
 _state = {
@@ -94,7 +101,7 @@ def ros(command: str, timeout: float = 60.0) -> subprocess.CompletedProcess:
     )
 
 
-def launch(launch_file: str, log_name: str) -> None:
+def launch(launch_file: str, log_name: str, args: tuple[str, ...] = ()) -> None:
     """Start a roslaunch detached, so it outlives the request that asked for it."""
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / log_name
@@ -103,7 +110,7 @@ def launch(launch_file: str, log_name: str) -> None:
         "source /opt/ros/noetic/setup.bash >/dev/null 2>&1; "
         f"source {WORKSPACE}/devel/setup.bash >/dev/null 2>&1; "
         f"export ROS_MASTER_URI={ROS_MASTER_URI}; export ROS_IP={ROS_IP}; "
-        f"exec roslaunch rb1_base_gazebo {launch_file}"
+        f"exec roslaunch rb1_base_gazebo {launch_file} {' '.join(args)}"
     )
     with log_path.open("wb") as log:
         subprocess.Popen(
@@ -128,6 +135,55 @@ def wait_for_service(name: str, present: bool, timeout: float = SERVICE_TIMEOUT)
             return True
         time.sleep(1.0)
     return False
+
+
+def read_pose() -> dict | None:
+    """The robot's pose in the map frame now (robot_map -> robot_base_footprint), or None.
+
+    While gmapping runs this is gmapping's estimate, which is exactly the pose the localiser has to
+    start from once the map is saved: the new map's frame is anchored on where the session began, so
+    the robot is somewhere else in it than the (0, 0, 0) a bare restore would assume (F-009).
+    """
+    result = ros(f"python3 {POSE_TOOL}", timeout=20)
+    if result.returncode != 0:
+        return None
+    try:
+        return json.loads(result.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return None
+
+
+def seed_args(pose: dict | None) -> tuple[str, ...]:
+    if pose is None:
+        return ()
+    return (
+        f"x_init_pose:={pose['x']!r}",
+        f"y_init_pose:={pose['y']!r}",
+        f"init_yaw:={pose['yaw']!r}",
+    )
+
+
+def restore_localisation(pose: dict | None) -> tuple[bool, str]:
+    """Bring AMCL and the map server back, seeded at `pose`, and prove AMCL is localising.
+
+    Restored means two things, not one: the map server answers `static_map`, AND after a forced
+    no-motion update a `/robot/amcl_pose` newer than that request arrives. A server that is back with a
+    localiser that never speaks is a robot that looks restored and is blind; the old check could not
+    tell the two apart (F-009). Returns (restored, what happened) for the caller's `detail`.
+    """
+    launch("localization_restore.launch", "localization_restore.log", seed_args(pose))
+    if not wait_for_service(STATIC_MAP_SERVICE, present=True):
+        return False, "the map server did not come back - check the sim VM"
+    for _ in range(POSE_ATTEMPTS):
+        result = ros(f"python3 {POSE_TOOL} --amcl-after --timeout {POSE_ATTEMPT_SECONDS}",
+                     timeout=POSE_ATTEMPT_SECONDS + 15)
+        if result.returncode == 0:
+            seeded = "at the pose the session ended in" if pose else "WITHOUT a starting pose"
+            return True, f"localisation restored {seeded}"
+    return False, (
+        "the map server is back but AMCL produced no pose after a forced update; "
+        "the robot may be unlocalised - check the sim VM"
+    )
 
 
 def kill_nodes(*names: str) -> None:
@@ -168,6 +224,7 @@ def start_session() -> tuple[int, dict]:
     if _state["active"]:
         return 409, {"error": "a mapping session is already running", "state": public_state()}
 
+    pose = read_pose()  # before AMCL goes: it is the pose to come back to if the start fails
     _state["phase"] = "stopping localisation"
     kill_nodes(*LOCALISATION_NODES)
     if not wait_for_service(STATIC_MAP_SERVICE, present=False, timeout=20):
@@ -179,10 +236,9 @@ def start_session() -> tuple[int, dict]:
     if not wait_for_service(DYNAMIC_MAP_SERVICE, present=True):
         # Do not leave the robot with neither a map server nor gmapping: it could not plan at all.
         _state["phase"] = "restoring localisation after a failed start"
-        launch("localization_restore.launch", "localization_restore.log")
-        wait_for_service(STATIC_MAP_SERVICE, present=True)
-        _state["phase"] = "idle"
-        return 500, {"error": "gmapping did not start; localisation restored"}
+        restored, what = restore_localisation(pose)
+        _state["phase"] = "idle" if restored else "localisation did not come back"
+        return 500, {"error": f"gmapping did not start; {what}"}
 
     _state.update(
         active=True,
@@ -209,23 +265,19 @@ def stop_session() -> tuple[int, dict]:
             "detail": (saved.stderr or saved.stdout)[-400:],
         }
 
+    pose = read_pose()  # gmapping's estimate, while gmapping still publishes it
     _state["phase"] = "stopping gmapping"
     kill_nodes(GMAPPING_NODE)
 
     _state["phase"] = "restoring localisation"
-    launch("localization_restore.launch", "localization_restore.log")
-    restored = wait_for_service(STATIC_MAP_SERVICE, present=True)
+    restored, what = restore_localisation(pose)
 
     _state.update(
         active=False,
         phase="idle" if restored else "localisation did not come back",
         stopped_at=now(),
         map_saved_at=now(),
-        detail=(
-            "map saved and localisation restored against it"
-            if restored
-            else "map saved, but the map server did not come back - check the sim VM"
-        ),
+        detail=(f"map saved; {what}" if restored else f"map saved, but {what}"),
     )
     body = {"state": public_state(), "map": read_map_meta()}
     return (200 if restored else 500), body
