@@ -1,0 +1,20 @@
+# Permanent virtual display :99 - Gazebo creates no camera sensor without a render engine (D-9).
+# Record of /etc/systemd/system/xvfb.service on the sim VM, copied 30.10.2026 (step 4.3).
+#
+# Install: sudo cp tools/systemd/xvfb.service /etc/systemd/system/ &&
+#          sudo systemctl daemon-reload && sudo systemctl enable --now xvfb
+#
+[Unit]
+Description=Xvfb virtual framebuffer on :99 (required for Gazebo camera sensors)
+Documentation=robco-control-center/docs/inspection_camera_spec.md
+After=network.target
+
+[Service]
+Type=simple
+User=swu
+ExecStart=/usr/bin/Xvfb :99 -screen 0 1280x1024x24 +extension GLX +extension RENDER -noreset
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+# Record of /etc/systemd/system/web-video-server.service on the sim VM, copied 30.10.2026 (step 4.3).
+#
+# Install: sudo cp tools/systemd/web-video-server.service /etc/systemd/system/ &&
+#          sudo systemctl daemon-reload && sudo systemctl enable --now web-video-server
+#
+# MJPEG bridge from the ROS image topics to the operator console (plan step P1.7).
+#
+# The console reaches this through nginx on the web VM at /video/ — browsers never talk to this
+# host directly (PRD §8), and the port is firewalled to the web VM alone.
+#
+# Restart=always is load-bearing rather than defensive: the simulation is started by hand with
+# tools/run_neo_workshop.sh, so at boot there is no ROS master to connect to. The service simply
+# retries until there is one.
+#
+# ROS_IP is set here because Ubuntu's .bashrc returns early for a non-interactive shell, so the
+# exports in it never reach a systemd unit — the same trap that once kept the bridge from reaching
+# this host at all.
+
+[Unit]
+Description=web_video_server for the RobcoGADGET inspection camera (plan step P1.7)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=swu
+Environment=ROS_IP=10.25.25.123
+Environment=ROS_MASTER_URI=http://10.25.25.123:11311
+ExecStart=/bin/bash -c 'source /opt/ros/noetic/setup.bash && exec rosrun web_video_server web_video_server _port:=8080 _address:=0.0.0.0'
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
