@@ -1,0 +1,16 @@
+# Firewall of the sim VM, as `sudo ufw status numbered` printed it on 30.10.2026 (step 4.3).
+# A RECORD ONLY - nothing applies this file. Recreate rules with ufw, behind a rollback timer
+# (a mistake here costs SSH); see robco-control-center/docs/sim_vm_services.md section 3.
+#
+Status: active
+
+     To                         Action      From
+     --                         ------      ----
+[ 1] 22/tcp                     ALLOW IN    Anywhere                  
+[ 2] Anywhere on tailscale0     ALLOW IN    Anywhere                  
+[ 3] 8080/tcp                   ALLOW IN    10.25.25.113              
+[ 4] 8090/tcp                   ALLOW IN    10.25.25.113               # map manager (P2.5) - web VM only
+[ 5] Anywhere                   ALLOW IN    10.25.25.115               # bridge VM (was .108)
+[ 6] 22/tcp (v6)                ALLOW IN    Anywhere (v6)             
+[ 7] Anywhere (v6) on tailscale0 ALLOW IN    Anywhere (v6)             
+

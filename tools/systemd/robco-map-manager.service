@@ -1,0 +1,35 @@
+# SLAM session control for the operator console (plan step P2.5; see tools/map_manager_acceptance.sh).
+# Runs the map manager (rb1_base_gazebo/scripts/map_manager.py) on :8090, firewalled to the web VM.
+# Record of /etc/systemd/system/robco-map-manager.service on the sim VM, copied 30.10.2026 (step 4.3).
+#
+# Install: sudo cp tools/systemd/robco-map-manager.service /etc/systemd/system/ &&
+#          sudo systemctl daemon-reload && sudo systemctl enable --now robco-map-manager
+# Restarting it kills a gmapping session it started (KillMode=control-group): stop the session first.
+#
+[Unit]
+Description=RobcoGADGET map manager (SLAM session start/stop, plan step P2.5)
+Documentation=https://github.com/skydancerbg/robco-control-center/blob/main/docs/sim_vm_services.md
+After=network-online.target
+Wants=network-online.target
+# No dependency on the simulation: this service must answer "no session is running" while the
+# simulation is down, rather than disappear with it.
+
+[Service]
+Type=simple
+User=swu
+WorkingDirectory=/home/swu
+ExecStart=/usr/bin/python3 /home/swu/catkin_ws/src/rb1_base_sim/rb1_base_gazebo/scripts/map_manager.py
+Restart=always
+RestartSec=5
+
+# The values this deployment runs with, stated here rather than left to the script's defaults.
+# The port is firewalled to the web VM alone (ufw) - this service has no authentication of its
+# own, exactly like web_video_server on :8080 and rosbridge on :9090.
+Environment=MAP_MANAGER_HOST=0.0.0.0
+Environment=MAP_MANAGER_PORT=8090
+Environment=ROS_MASTER_URI=http://10.25.25.123:11311
+Environment=ROS_IP=10.25.25.123
+Environment=MAP_MANAGER_LOG_DIR=/home/swu/.robco
+
+[Install]
+WantedBy=multi-user.target
