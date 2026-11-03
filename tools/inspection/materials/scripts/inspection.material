@@ -1,0 +1,32 @@
+// Display textures for the inspection panel (plan step P5.6). Unlit on purpose: a display emits its
+// own light, so its digits stay readable in the dimmed regime, as they would on a real device.
+
+material Inspection/DisplayNorm
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture display_norm.png
+      }
+    }
+  }
+}
+
+material Inspection/DisplayAnomaly
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture display_anomaly.png
+      }
+    }
+  }
+}

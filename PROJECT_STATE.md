@@ -179,3 +179,12 @@
 - `tools/run_neo_workshop.sh navigation`
 - Demo:
 - `tools/run_neo_workshop.sh demo`
+
+# Inspection objects and lighting regimes (plan step P5.6)
+
+- Lighting regimes for detection experiments: `~/lighting/set_regime.sh <nominal|dimmed|side>` (the world file is untouched)
+- State-controllable inspection panel (lamp, dial, display): `~/inspection/set_state.sh <object> <norm|anomaly>`, spawned into the running simulation on demand
+- `~/lighting` and `~/inspection` are symlinks into `tools/lighting` and `tools/inspection`
+- The simulated robot creeps slightly while idle; use `~/inspection/set_state.sh park` before measurements
+- Acceptance check and evidence frames: `~/inspection/verify_p56.py`, `docs/evidence/p5.6/`
+- Details and measurements: `docs/inspection_world_objects.md`

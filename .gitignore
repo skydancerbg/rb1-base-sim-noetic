@@ -36,3 +36,8 @@ __pycache__/
 *.previous.pgm
 # LibreOffice lock files
 .~lock.*#
+
+# Runtime logs of the inspection and lighting scripts (P5.6)
+tools/lighting/current_regime
+tools/lighting/regime.log
+tools/inspection/state.log
