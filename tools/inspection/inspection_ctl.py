@@ -283,6 +283,9 @@ def main(argv=None) -> int:
         world.park()
         print(json.dumps({"parked": {"x": HOME[0], "y": HOME[1], "yaw_degrees": HOME[2]}}))
         return 0
+    if args.command == "status":  # reading must not change the world: no panel is not an error
+        print(json.dumps({"spawned": [], "state": world.read()}))
+        return 0
     spawned = world.ensure(anchor)
     if spawned and args.command != "ensure":
         time.sleep(0.5)  # a model just spawned is not always settable in the same instant
