@@ -66,7 +66,7 @@ from geometry_msgs.msg import Twist
 from robotnik_msgs.msg import BatteryStatus
 from robotnik_msgs.srv import set_float_value, set_float_valueResponse
 from sensor_msgs.msg import BatteryState
-from std_msgs.msg import String
+from std_msgs.msg import Float32, String
 from std_srvs.srv import SetBool, SetBoolResponse
 
 #: Below this, the model reports the pack as empty rather than going negative.
@@ -118,6 +118,11 @@ class SimBatteryModel(object):
         rospy.Subscriber(cmd_topic, Twist, self._on_cmd, queue_size=10)
 
         rospy.Service("~set_level", set_float_value, self._on_set_level)
+        # The same fault injection as `~set_level`, as a topic of a type that crosses the ROS 1 ->
+        # ROS 2 bridge. `set_float_value` is a robotnik_msgs service and the bridge has no build of
+        # robotnik_msgs, so nothing outside the robot's own network could lower the charge, and the
+        # P4.2 acceptance (drive the battery below the threshold) could not run from the web VM.
+        rospy.Subscriber("~inject_level", Float32, self._on_inject_level, queue_size=1)
         rospy.Service("~set_charging", SetBool, self._on_set_charging)
 
         statement = (
@@ -158,6 +163,15 @@ class SimBatteryModel(object):
             self._level = value
         rospy.logwarn("sim_battery_model: level set to %.1f%% by request (fault injection)", value)
         return set_float_valueResponse(ret=True, errorMessage=String(data=""))
+
+    def _on_inject_level(self, msg):
+        value = float(msg.data)
+        if not MIN_LEVEL <= value <= MAX_LEVEL:
+            rospy.logwarn("sim_battery_model: inject_level %s is outside 0..100; ignored", value)
+            return
+        with self._lock:
+            self._level = value
+        rospy.logwarn("sim_battery_model: level set to %.1f%% by topic (fault injection)", value)
 
     def _on_set_charging(self, request):
         with self._lock:
