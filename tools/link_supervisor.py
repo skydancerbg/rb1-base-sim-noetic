@@ -14,8 +14,11 @@ whole chain backend -> rosbridge -> bridge -> this ROS master is alive. Once a h
 seen (the node is "armed"):
 
   * silence longer than STOP_AFTER_S (0.3 s, the watchdog interval of §3.4): engage the twist_mux lock
-    `link_loss` (priority 254, just under the operator's emergency stop at 255), which zeroes the
-    velocity output whatever move_base or any other input says;
+    `link_loss` (priority 254, just under the operator's emergency stop at 255), which silences every
+    velocity input, AND publish zero velocity straight to the controller input at 20 Hz for as long
+    as the link is lost. The zeros are needed: measured 09.11.2026, a locked twist_mux publishes
+    nothing, and the simulated drive keeps executing its last command (it turned on at 0.46 rad/s for
+    12 s) - the controller's velocity timeout does not act in this simulation;
   * silence longer than CANCEL_AFTER_S (3 s, the backend route engine's own stale-status limit):
     cancel every move_base goal, so the robot does not resume a stale goal on its own when the link
     returns - the route engine re-issues the interrupted step (Table 3.2);
@@ -36,12 +39,16 @@ import time
 
 import rospy
 from actionlib_msgs.msg import GoalID
+from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool, String, UInt32
 
 HEARTBEAT = "/robot/web_link/heartbeat"
 STATE = "/robot/web_link/state"
 LOCK = "/robot/link_supervisor/lock"
 CANCEL = "/robot/move_base/cancel"
+#: The controller's input, downstream of twist_mux: silent while the mux is locked.
+CONTROLLER_CMD = "/robot/robotnik_base_control/cmd_vel"
+ZERO_PERIOD_S = 0.05
 LOG = "/var/log/robco/link_supervisor.jsonl"
 
 STOP_AFTER_S = float(os.environ.get("LINK_STOP_AFTER_S", "0.3"))
@@ -59,6 +66,8 @@ class Supervisor:
         self.lock_pub = rospy.Publisher(LOCK, Bool, queue_size=1, latch=True)
         self.cancel_pub = rospy.Publisher(CANCEL, GoalID, queue_size=1)
         self.state_pub = rospy.Publisher(STATE, String, queue_size=1)
+        self.zero_pub = rospy.Publisher(CONTROLLER_CMD, Twist, queue_size=1)
+        self.next_zero = 0.0
         rospy.Subscriber(HEARTBEAT, UInt32, self.on_beat, queue_size=10)
 
     def log(self, event, **fields):
@@ -100,7 +109,12 @@ class Supervisor:
                 self.cancelled = True
         if stop:
             self.lock_pub.publish(Bool(True))
+            self.zero_pub.publish(Twist())
+            self.next_zero = now + ZERO_PERIOD_S
             self.log("lost", silence_s=round(silence, 3))
+        elif self.lost and now >= self.next_zero:
+            self.zero_pub.publish(Twist())  # hold the drive at zero while the link is lost
+            self.next_zero = now + ZERO_PERIOD_S
         if cancel:
             self.cancel_pub.publish(GoalID())  # an empty id cancels every goal
             self.log("goals_cancelled", silence_s=round(silence, 3))
