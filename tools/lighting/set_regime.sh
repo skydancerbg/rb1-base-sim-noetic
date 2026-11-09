@@ -8,14 +8,17 @@
 #   dimmed    50 % of the nominal intensity (dissertation §4.2.2): sun diffuse 0.4, ambient 0.2,
 #             same direction
 #   side      "a directed source at an angle, creating glare and shadows" (§4.2.2): the sun and ambient
-#             turned right down (diffuse 0.05, ambient 0.08) and one SPOT light placed to the left of
-#             the inspection panel and in front of it, at the panel's height, aimed at the panel's
-#             centre from the side, with a strong specular term (glare) and shadows switched on for
-#             the scene and the lamp; every other regime switches scene shadows off again, as the
-#             world file has them
+#             turned right down (diffuse 0.05, ambient 0.08) and one point light placed to the left of
+#             the inspection panel and in front of it, at the panel's height, so the panel is lit at
+#             an oblique angle, with a strong specular term (glare) and shadows switched on for the
+#             scene and the lamp; every other regime switches scene shadows off again, as the world
+#             file has them. Measured 09.11.2026 (pilot): panel brightness 185 on the lit side
+#             against 90 on the far side, the dial face washed out by glare; the camera runs at about
+#             6 Hz in this regime (shadows in software rendering) against 15 Hz otherwise. A spot
+#             light aimed at the panel was tried and barely lit it.
 #
 # Aligned with the dissertation text on 09.11.2026 (D-50): dimmed was 0.2/0.1 (25 %), and the side
-# lamp was a point light without shadows.
+# lamp had no glare term and no shadows.
 #
 # Done with Gazebo transport messages to the running server (light/modify for the sun, scene for the
 # ambient, factory/light for the side lamp), so nothing restarts and the world file is untouched. The
@@ -41,8 +44,6 @@ SIDE_LAMP=regime_side_lamp
 SIDE_LAMP_X=-0.7
 SIDE_LAMP_Y=1.42
 SIDE_LAMP_Z=1.2
-#: Aim: from the lamp to the panel centre (inspection ANCHOR -0.185, 0.524 at height 1.2).
-SIDE_LAMP_DIR="x: 0.515 y: -0.896 z: 0"
 
 if [ "$#" -ne 1 ]; then
   sed -n '2,7p' "$0" >&2
@@ -70,7 +71,7 @@ gz topic -p /gazebo/default/light/modify -m "name: \"sun\" diffuse {r: ${diffuse
 
 if [ "$lamp" = on ]; then
   if ! side_lamp_present; then
-    gz topic -p /gazebo/default/factory/light -m "name: \"${SIDE_LAMP}\" type: SPOT pose {position {x: ${SIDE_LAMP_X} y: ${SIDE_LAMP_Y} z: ${SIDE_LAMP_Z}} orientation {x: 0 y: 0 z: 0 w: 1}} direction {${SIDE_LAMP_DIR}} diffuse {r: 1 g: 1 b: 1 a: 1} specular {r: 0.9 g: 0.9 b: 0.9 a: 1} attenuation_constant: 0.4 attenuation_linear: 0.25 attenuation_quadratic: 0.15 range: 8 spot_inner_angle: 0.35 spot_outer_angle: 0.7 spot_falloff: 1 cast_shadows: true"
+    gz topic -p /gazebo/default/factory/light -m "name: \"${SIDE_LAMP}\" type: POINT pose {position {x: ${SIDE_LAMP_X} y: ${SIDE_LAMP_Y} z: ${SIDE_LAMP_Z}} orientation {x: 0 y: 0 z: 0 w: 1}} diffuse {r: 1 g: 1 b: 1 a: 1} specular {r: 0.9 g: 0.9 b: 0.9 a: 1} attenuation_constant: 0.4 attenuation_linear: 0.25 attenuation_quadratic: 0.15 range: 8 cast_shadows: true"
     sleep 0.5
   fi
 elif side_lamp_present; then
