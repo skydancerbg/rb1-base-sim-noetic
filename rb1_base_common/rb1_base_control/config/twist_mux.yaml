@@ -29,3 +29,9 @@ locks:
   topic   : robotnik_base_hw/emergency_stop
   timeout : 0.0
   priority: 255
+# Held by tools/link_supervisor.py while the control-center link is lost (dissertation §3.4/§4.2.4):
+# just under the operator's emergency stop, above every velocity input.
+- name    : link_loss
+  topic   : link_supervisor/lock
+  timeout : 0.0
+  priority: 254

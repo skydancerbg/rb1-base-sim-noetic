@@ -1,0 +1,25 @@
+# Stops the robot when the link to the control center is lost (tools/link_supervisor.py;
+# dissertation §3.4 / §4.2.4, alignment D-50, 09.11.2026).
+#
+# Install: sudo mkdir -p /var/log/robco && sudo chown swu /var/log/robco &&
+#          sudo cp tools/systemd/link-supervisor.service /etc/systemd/system/ &&
+#          sudo systemctl daemon-reload && sudo systemctl enable --now link-supervisor
+#
+# Restart=always: the simulation is started by hand, so at boot there is no ROS master yet and the
+# node retries until there is one. It does nothing until the first heartbeat arrives.
+
+[Unit]
+Description=Stop the robot when the control-center link is lost (RobcoGADGET)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=swu
+Environment=ROS_IP=10.25.25.123
+Environment=ROS_MASTER_URI=http://10.25.25.123:11311
+ExecStart=/bin/bash -c "source /opt/ros/noetic/setup.bash && exec python3 /home/swu/catkin_ws/src/tools/link_supervisor.py"
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
