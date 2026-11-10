@@ -25,6 +25,8 @@
 				<publishTF>${publish_tf}</publishTF>
 				<enableYAxis>false</enableYAxis>
 				<disablePitchAndRoll>true</disablePitchAndRoll>
+				<!-- dissertation §3.4, third dead-man layer: the drive stops when no velocity command arrives within the configured interval (the same 0.25 s as cmd_vel_timeout in the controller config); default -1 = never (review C-003, 10.11.2026) -->
+				<cmdTimeout>0.25</cmdTimeout>
 			</plugin>
 		</gazebo>
 	</xacro:macro>
