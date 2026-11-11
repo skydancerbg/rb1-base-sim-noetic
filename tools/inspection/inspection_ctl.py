@@ -19,6 +19,17 @@ How a state is made visible:
            from straight up as the camera sees it.
   display  two models with a different reading ("42.7" / "49.9") share one place; the other is parked.
 
+Graded levels (E2-v2, experiments_to_conclude/E2_SPEC.md): besides the two named states,
+  lamp     hue=<offset>   a lamp with the norm green's saturation and value, its hue moved by <offset>
+                          degrees (negative = toward yellow); one extra sphere `inspection_lamp_lvl_<code>`
+                          is spawned for the level (the named-state spheres are parked) and deleted again
+                          when another state is set;
+  display  value=<text>   a display showing <text> (digits and one point), from the generated textures in
+                          materials/levels (tools/inspection/make_display_textures.py, DejaVu Sans);
+                          model `inspection_display_v<digits>`;
+  dial     angle=<deg>    (existed already).
+The level is encoded in the model's name, so `status` reads it back from Gazebo, not from a file.
+
 The panel position is a measured constant (ANCHOR): the robot at test spot "a", 1.0 m from the board,
 which puts the board at the camera's height (1.2 m). Change it with --anchor X,Y if the spot changes.
 """
@@ -26,15 +37,17 @@ which puts the board at the camera's height (1.2 m). Change it with --anchor X,Y
 from __future__ import annotations
 
 import argparse
+import colorsys
 import json
 import math
+import re
 import os
 import sys
 import time
 
 import rospy
 from gazebo_msgs.msg import ModelState
-from gazebo_msgs.srv import DeleteModel, GetModelState, SetModelState, SpawnModel
+from gazebo_msgs.srv import DeleteModel, GetModelState, GetWorldProperties, SetModelState, SpawnModel
 from geometry_msgs.msg import Point, Pose, Quaternion
 
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -90,7 +103,62 @@ LAMP_COLOURS = {
 }
 
 
+#: The norm green of LAMP_COLOURS as HSV: hue 133.33 deg, saturation 1.0, value 0.9; a level keeps S and V.
+LAMP_NORM_HSV = colorsys.rgb_to_hsv(0.0, 0.9, 0.2)
+LEVELS = os.path.join(MATERIALS, "levels")
+LAMP_LEVEL_PREFIX = "inspection_lamp_lvl_"
+DISPLAY_LEVEL_PREFIX = "inspection_display_v"
+
+
+def lamp_level_name(offset_deg: float) -> str:
+    code = int(round(offset_deg * 10))
+    return f"{LAMP_LEVEL_PREFIX}{'m' if code < 0 else 'p'}{abs(code)}"
+
+
+def lamp_level_offset(name: str) -> float:
+    code = name[len(LAMP_LEVEL_PREFIX):]
+    return (-1 if code[0] == "m" else 1) * int(code[1:]) / 10.0
+
+
+def lamp_level_sdf(name: str) -> str:
+    h = (LAMP_NORM_HSV[0] + lamp_level_offset(name) / 360.0) % 1.0
+    diffuse = colorsys.hsv_to_rgb(h, LAMP_NORM_HSV[1], LAMP_NORM_HSV[2])
+    ambient = tuple(round(c * 0.25 / 0.9, 4) for c in diffuse)  # same ambient/diffuse ratio as the norm green
+    diffuse = tuple(round(c, 4) for c in diffuse)
+    return _sdf(
+        name,
+        '<visual name="v"><geometry><sphere><radius>0.03</radius></sphere></geometry>'
+        + _material(ambient, diffuse, diffuse)
+        + "</visual>",
+    )
+
+
+def display_level_name(text: str) -> str:
+    if not re.fullmatch(r"\d{1,3}\.\d", text):
+        raise ValueError(f"display value must look like 42.7, got {text!r}")
+    return DISPLAY_LEVEL_PREFIX + text.replace(".", "")
+
+
+def display_level_text(name: str) -> str:
+    digits = name[len(DISPLAY_LEVEL_PREFIX):]
+    return f"{digits[:-1]}.{digits[-1]}"
+
+
+def display_level_sdf(name: str) -> str:
+    material = "Inspection/DisplayV" + name[len(DISPLAY_LEVEL_PREFIX):]
+    return _sdf(
+        name,
+        '<visual name="v"><geometry><box><size>0.004 0.26 0.10</size></box></geometry>'
+        f"<material><script><uri>file://{LEVELS}/scripts</uri><uri>file://{LEVELS}/textures</uri>"
+        f"<name>{material}</name></script></material></visual>",
+    )
+
+
 def model_sdf(name: str) -> str:
+    if name.startswith(LAMP_LEVEL_PREFIX):
+        return lamp_level_sdf(name)
+    if name.startswith(DISPLAY_LEVEL_PREFIX):
+        return display_level_sdf(name)
     if name == "inspection_board":
         return _sdf(
             name,
@@ -169,9 +237,13 @@ def target_poses(anchor, lamp: str, needle: float, display: str) -> dict[str, Po
     poses = {"inspection_board": board_pose(anchor), "inspection_dial": place("dial", anchor)}
     for colour in LAMP_COLOURS:
         poses[f"inspection_lamp_{colour}"] = place("lamp", anchor, parked=colour != lamp)
+    if lamp.startswith(LAMP_LEVEL_PREFIX):  # a graded level: its own sphere, the named ones parked
+        poses[lamp] = place("lamp", anchor)
     poses["inspection_needle"] = place("needle", anchor, angle=needle)
     for reading in ("norm", "anomaly"):
         poses[f"inspection_display_{reading}"] = place("display", anchor, parked=reading != display)
+    if display.startswith(DISPLAY_LEVEL_PREFIX):
+        poses[display] = place("display", anchor)
     return poses
 
 
@@ -187,6 +259,24 @@ class World:
         self._set = rospy.ServiceProxy("/gazebo/set_model_state", SetModelState)
         self._spawn = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
         self._delete = rospy.ServiceProxy("/gazebo/delete_model", DeleteModel)
+        self._world = rospy.ServiceProxy("/gazebo/get_world_properties", GetWorldProperties)
+
+    def level_models(self) -> list[str]:
+        """Graded-level models present in the world (their names carry the level)."""
+        return [n for n in self._world().model_names if n.startswith((LAMP_LEVEL_PREFIX, DISPLAY_LEVEL_PREFIX))]
+
+    def set_levels(self, wanted: list[str], anchor) -> None:
+        """Exactly the `wanted` level models exist afterwards (others deleted; missing ones spawned, parked)."""
+        for name in self.level_models():
+            if name not in wanted:
+                self._delete(name)
+        for name in wanted:
+            if not self.exists(name):
+                pose = Pose(position=Point(x=anchor[0], y=anchor[1], z=PARKED_Z), orientation=Quaternion(w=1.0))
+                reply = self._spawn(name, model_sdf(name), "", pose, "world")
+                if not reply.success:
+                    raise RuntimeError(f"could not spawn {name}: {reply.status_message}")
+                time.sleep(0.5)  # a model just spawned is not always settable in the same instant
 
     def exists(self, name: str) -> bool:
         return bool(self._get(name, "world").success)
@@ -226,7 +316,7 @@ class World:
 
     def remove(self) -> list[str]:
         gone = []
-        for name in MODELS:
+        for name in MODELS + self.level_models():
             if self.exists(name):
                 self._delete(name)
                 gone.append(name)
@@ -238,9 +328,18 @@ class World:
             return None
         lamp = next((c for c in LAMP_COLOURS if self.pose(f"inspection_lamp_{c}").position.z > 0), None)
         display = next((r for r in ("norm", "anomaly") if self.pose(f"inspection_display_{r}").position.z > 0), None)
+        display = {"norm": "42.7", "anomaly": "49.9"}.get(display, None)
+        display_source = "named" if display else None
+        for name in self.level_models():
+            if self.pose(name).position.z <= 0:
+                continue
+            if name.startswith(LAMP_LEVEL_PREFIX):
+                lamp = f"hue={lamp_level_offset(name):+.1f}"
+            else:
+                display, display_source = display_level_text(name), "level"
         q = self.pose("inspection_needle").orientation
         angle = math.degrees(2.0 * math.atan2(q.x, q.w)) % 360.0
-        return {"lamp": lamp, "dial": round(angle, 1), "display": {"norm": "42.7", "anomaly": "49.9"}.get(display, None)}
+        return {"lamp": lamp, "dial": round(angle, 1), "display": display, "display_source": display_source}
 
 
 # --- states --------------------------------------------------------------------------------------
@@ -256,8 +355,14 @@ def current(world: World) -> tuple[str, float, str]:
     state = world.read()
     if state is None:
         return "green", NEEDLE_NORM, "norm"
-    display = "anomaly" if state["display"] == "49.9" else "norm"
-    return state["lamp"] or "green", state["dial"], display
+    if state.get("display_source") == "level":
+        display = display_level_name(state["display"])
+    else:
+        display = "anomaly" if state["display"] == "49.9" else "norm"
+    lamp = state["lamp"] or "green"
+    if lamp.startswith("hue="):
+        lamp = lamp_level_name(float(lamp[4:]))
+    return lamp, state["dial"], display
 
 
 def main(argv=None) -> int:
@@ -266,7 +371,7 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     one = sub.add_parser("set", help="put one object into a state")
     one.add_argument("object", choices=["lamp", "dial", "display"])
-    one.add_argument("state", help="norm | anomaly (lamp also: off; dial also: angle=<degrees>)")
+    one.add_argument("state", help="norm | anomaly (lamp also: off, hue=<offset deg>; dial also: angle=<degrees>; display also: value=<NN.N>)")
     sub.add_parser("all", help="put every object into the same named state: norm or anomaly").add_argument("state", choices=["norm", "anomaly"])
     sub.add_parser("status", help="print the panel's present state as JSON")
     sub.add_parser("park", help="put the robot at the inspection spot (exact pose, zero velocity)")
@@ -295,9 +400,12 @@ def main(argv=None) -> int:
 
     if args.command == "set":
         if args.object == "lamp":
-            if args.state not in STATES["lamp"]:
-                parser.error("lamp states: norm, anomaly, off")
-            lamp = STATES["lamp"][args.state]
+            if args.state.startswith("hue="):
+                lamp = lamp_level_name(float(args.state.split("=", 1)[1]))
+            elif args.state not in STATES["lamp"]:
+                parser.error("lamp states: norm, anomaly, off, hue=<offset degrees>")
+            else:
+                lamp = STATES["lamp"][args.state]
         elif args.object == "dial":
             if args.state == "norm":
                 needle = NEEDLE_NORM
@@ -308,12 +416,21 @@ def main(argv=None) -> int:
             else:
                 parser.error("dial states: norm, anomaly, angle=<degrees>")
         else:
-            if args.state not in STATES["display"]:
-                parser.error("display states: norm, anomaly")
-            display = STATES["display"][args.state]
+            if args.state.startswith("value="):
+                try:
+                    display = display_level_name(args.state.split("=", 1)[1])
+                except ValueError as exc:
+                    parser.error(str(exc))
+                if not os.path.exists(os.path.join(LEVELS, "textures", f"display_v{display[len(DISPLAY_LEVEL_PREFIX):]}.png")):
+                    parser.error(f"no generated texture for {args.state} (make_display_textures.py)")
+            elif args.state not in STATES["display"]:
+                parser.error("display states: norm, anomaly, value=<NN.N>")
+            else:
+                display = STATES["display"][args.state]
     elif args.command == "all":
         lamp, needle, display = (STATES["lamp"][args.state], NEEDLE_NORM if args.state == "norm" else NEEDLE_ANOMALY, args.state)
     if args.command in ("set", "all", "ensure"):
+        world.set_levels([m for m in (lamp, display) if m.startswith((LAMP_LEVEL_PREFIX, DISPLAY_LEVEL_PREFIX))], anchor)
         world.apply(target_poses(anchor, lamp, needle, display))
     print(json.dumps({"spawned": spawned, "state": world.read()}))
     return 0

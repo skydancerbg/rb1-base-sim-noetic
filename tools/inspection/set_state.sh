@@ -2,6 +2,7 @@
 # Put an inspection object into one of its states (plan step P5.6).
 #
 #   ssh sim ~/inspection/set_state.sh <lamp|dial|display> <norm|anomaly>
+#   ssh sim ~/inspection/set_state.sh lamp hue=<offset deg> | dial angle=<deg> | display value=<NN.N>   (E2-v2 levels)
 #   ssh sim ~/inspection/set_state.sh all <norm|anomaly>
 #   ssh sim ~/inspection/set_state.sh status        # read the panel back from the world
 #   ssh sim ~/inspection/set_state.sh ensure        # spawn the panel if the world lacks it
